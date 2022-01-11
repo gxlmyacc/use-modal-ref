@@ -14,7 +14,7 @@ type EndModalMethod = (result?: any, onDone?: () => void) => Promise<void>;
 type CancelModalMethod = (ex?: any, onDone?: () => void) => Promise<void>;
 
 
-type ModalRefOption<T, U> = {
+export type ModalRefOption<T, U> = {
   beforeModal?: (newData: Partial<any>, pause: (result: any) => void) => any;
   init?: (newData: Partial<any>) => void;
   beforeCloseModal?: (next: (ok: any) => void, action: ModalAction, modal: ModalRef<T, U>) => void;
@@ -23,9 +23,9 @@ type ModalRefOption<T, U> = {
   [key: string]: any
 }
 
-type ModalAction = 'end'|'cancel';
+export type ModalAction = 'end'|'cancel';
 
-interface ModalRef<T extends Partial<any>, U = any> {
+export interface ModalRef<T extends Partial<any>, U = any> {
   readonly visible: boolean;
   readonly data: T,
   readonly props: {
@@ -41,7 +41,7 @@ interface ModalRef<T extends Partial<any>, U = any> {
   [key: string]: any;
 }
 
-interface ModalData extends Partial<any> {
+export interface ModalData extends Partial<any> {
   onOK?: (data: any) => any;
   onCancel?: (data: any) => any;
 

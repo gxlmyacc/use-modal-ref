@@ -1,15 +1,15 @@
 import React from 'react';
 declare type EndModalMethod = (result?: any, onDone?: () => void) => Promise<void>;
 declare type CancelModalMethod = (ex?: any, onDone?: () => void) => Promise<void>;
-declare type ModalRefOption<T, U> = {
+export declare type ModalRefOption<T, U> = {
     beforeModal?: (newData: Partial<any>, pause: (result: any) => void) => any;
     init?: (newData: Partial<any>) => void;
     beforeCloseModal?: (next: (ok: any) => void, action: ModalAction, modal: ModalRef<T, U>) => void;
     afterCloseModal?: (newData: Partial<any>, action: ModalAction, modal: ModalRef<T, U>) => void;
     [key: string]: any;
 };
-declare type ModalAction = 'end' | 'cancel';
-interface ModalRef<T extends Partial<any>, U = any> {
+export declare type ModalAction = 'end' | 'cancel';
+export interface ModalRef<T extends Partial<any>, U = any> {
     readonly visible: boolean;
     readonly data: T;
     readonly props: {
@@ -21,7 +21,7 @@ interface ModalRef<T extends Partial<any>, U = any> {
     cancelModal: CancelModalMethod;
     [key: string]: any;
 }
-interface ModalData extends Partial<any> {
+export interface ModalData extends Partial<any> {
     onOK?: (data: any) => any;
     onCancel?: (data: any) => any;
     [key: string]: any;
