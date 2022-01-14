@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useState, useCallback, useImperativeHandle } from 'react';
+import React, { useMemo, useState, useCallback, useImperativeHandle } from 'react';
 
 function resolveDefaultData(data: any) {
   if (!data) return data;
@@ -176,7 +176,7 @@ function useModalRef<T extends Partial<any> = ModalData, U = any>(
 
   useImperativeHandle(ref, () => modal, [modal]);
 
-  useEffect(() => {
+  useMemo(() => {
     MODAL_EVENTS.forEach(eventName => {
       const cb = options[eventName];
       if (cb) (modal as any)[eventName] = cb;
