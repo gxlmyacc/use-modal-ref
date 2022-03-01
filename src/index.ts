@@ -15,7 +15,7 @@ type CancelModalMethod = (ex?: any, onDone?: () => void) => Promise<void>;
 
 
 export type ModalRefOption<T, U> = {
-  beforeModal?: (newData: Partial<any>, pause: (result: any) => void) => any;
+  beforeModal?: (newData: Partial<any>, pause: (result: any, isError?: boolean) => void) => any;
   init?: (newData: Partial<any>) => void;
   beforeCloseModal?: (next: (ok: any) => void, action: ModalAction, modal: ModalRef<T, U>) => void;
   afterCloseModal?: (newData: Partial<any>, action: ModalAction, modal: ModalRef<T, U>) => void;
@@ -39,6 +39,11 @@ export interface ModalRef<T extends Partial<any>, U = any> {
   cancelModal: CancelModalMethod;
 
   [key: string]: any;
+}
+
+export interface ModalResult<T = Partial<any>> {
+  modal: ModalRef<ModalData>,
+  data: T,
 }
 
 export interface ModalData extends Partial<any> {
@@ -85,12 +90,16 @@ function useModalRef<T extends Partial<any> = ModalData, U = any>(
           if (props.visible) return;
           if (this.beforeModal) {
             let pause: any = false;
+            let isError = false;
             newData = await this.beforeModal(
               newData,
-              (result = 'cancel') => pause = result,
+              (result = 'cancel', _isError = false) => {
+                pause = result;
+                isError = _isError;
+              },
             ) || newData;
             if (pause) {
-              return (pause === 'cancel' || pause instanceof Error) ? reject(pause) : resolve(pause);
+              return (pause === 'cancel' || pause instanceof Error || isError) ? reject(pause) : resolve(pause);
             }
           }
 
