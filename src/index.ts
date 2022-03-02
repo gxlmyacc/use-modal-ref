@@ -107,7 +107,7 @@ function useModalRef<T extends Partial<any> = ModalData, U = any>(
               },
               options
             ) || newData;
-            if (pause) {
+            if (pause || isError) {
               const checkIsError = (v: any) => {
                 if (pause === 'cancel'
                 || pause instanceof Error
