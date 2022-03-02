@@ -15,8 +15,8 @@ type CancelModalMethod = (ex?: any, onDone?: () => void) => Promise<void>;
 
 
 export type ModalRefOption<T, U> = {
-  beforeModal?: (newData: Partial<any>, pause: (result: any, isError?: boolean) => void) => any;
-  init?: (newData: Partial<any>) => void;
+  beforeModal?: (newData: Partial<any>, pause: (result: any, isError?: boolean) => void, options: Record<string, any>) => any;
+  init?: (newData: Partial<any>, options: Record<string, any>) => void;
   beforeCloseModal?: (next: (ok: any) => void, action: ModalAction, modal: ModalRef<T, U>) => void;
   afterCloseModal?: (newData: Partial<any>, action: ModalAction, modal: ModalRef<T, U>) => void;
 
@@ -33,7 +33,7 @@ export interface ModalRef<T extends Partial<any>, U = any> {
     onCancel: () => void
   }
 
-  modal(newData: T): Promise<U>;
+  modal(newData: T, options?: Record<string, any>): Promise<U>;
 
   endModal: EndModalMethod;
   cancelModal: CancelModalMethod;
@@ -55,7 +55,7 @@ export interface ModalData extends Partial<any> {
 
 function useModalRef<T extends Partial<any> = ModalData, U = any>(
   ref: React.Ref<any>,
-  defaultData: Partial<any> = {},
+  defaultData: Partial<any>|(() => Partial<any>) = {},
   options: ModalRefOption<T, U> = {},
   deps: React.DependencyList = []
 ) {
@@ -64,10 +64,12 @@ function useModalRef<T extends Partial<any> = ModalData, U = any>(
       resolve:(value: any) => any,
       reject: (value: any) => any
         },
-    data: T
+    data: T,
+    options: Record<string, any>
         }>(() => ({
           visible: false,
           data: resolveDefaultData(defaultData),
+          options: {}
         }));
 
   const modal = useMemo<ModalRef<T, U>>(() => {
@@ -84,10 +86,16 @@ function useModalRef<T extends Partial<any> = ModalData, U = any>(
           onCancel: this.cancelModal as CancelModalMethod,
         };
       },
+      get options() {
+        return props.options;
+      },
 
-      modal(newData: T = {} as any): Promise<U> {
+      modal(newData: T = {} as any, options: Record<string, any> = {}): Promise<U> {
         return new Promise(async (resolve, reject) => {
           if (props.visible) return;
+
+          Object.assign(this.options, options);
+
           if (this.beforeModal) {
             let pause: any = false;
             let isError = false;
@@ -97,9 +105,23 @@ function useModalRef<T extends Partial<any> = ModalData, U = any>(
                 pause = result;
                 isError = _isError;
               },
+              options
             ) || newData;
             if (pause) {
-              return (pause === 'cancel' || pause instanceof Error || isError) ? reject(pause) : resolve(pause);
+              const checkIsError = (v: any) => {
+                if (pause === 'cancel'
+                || pause instanceof Error
+                || isError) {
+                  return true;
+                }
+                if (v && v.head) {
+                  if (v.head.status && v.head.status !== 'Y') return true;
+                  if (v.head.code && v.head.code !== '00000000') return true;
+                }
+                if (v && v.success === false) return true;
+                return false;
+              };
+              return checkIsError(pause) ? reject(pause) : resolve(pause);
             }
           }
 
@@ -163,8 +185,10 @@ function useModalRef<T extends Partial<any> = ModalData, U = any>(
           });
           setProps({ ...props });
 
-          const { _init } = this;
-          if (_init) setTimeout(() => _init.call(this, newData));
+          setTimeout(() => {
+            const { init: _init } = this;
+            this.visible && _init && _init.call(this, newData, options);
+          });
         });
       },
     } as any;

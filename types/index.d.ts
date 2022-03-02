@@ -2,8 +2,8 @@ import React from 'react';
 declare type EndModalMethod = (result?: any, onDone?: () => void) => Promise<void>;
 declare type CancelModalMethod = (ex?: any, onDone?: () => void) => Promise<void>;
 export declare type ModalRefOption<T, U> = {
-    beforeModal?: (newData: Partial<any>, pause: (result: any, isError?: boolean) => void) => any;
-    init?: (newData: Partial<any>) => void;
+    beforeModal?: (newData: Partial<any>, pause: (result: any, isError?: boolean) => void, options: Record<string, any>) => any;
+    init?: (newData: Partial<any>, options: Record<string, any>) => void;
     beforeCloseModal?: (next: (ok: any) => void, action: ModalAction, modal: ModalRef<T, U>) => void;
     afterCloseModal?: (newData: Partial<any>, action: ModalAction, modal: ModalRef<T, U>) => void;
     [key: string]: any;
@@ -16,7 +16,7 @@ export interface ModalRef<T extends Partial<any>, U = any> {
         visible: boolean;
         onCancel: () => void;
     };
-    modal(newData: T): Promise<U>;
+    modal(newData: T, options?: Record<string, any>): Promise<U>;
     endModal: EndModalMethod;
     cancelModal: CancelModalMethod;
     [key: string]: any;
@@ -30,7 +30,7 @@ export interface ModalData extends Partial<any> {
     onCancel?: (data: any) => any;
     [key: string]: any;
 }
-declare function useModalRef<T extends Partial<any> = ModalData, U = any>(ref: React.Ref<any>, defaultData?: Partial<any>, options?: ModalRefOption<T, U>, deps?: React.DependencyList): {
+declare function useModalRef<T extends Partial<any> = ModalData, U = any>(ref: React.Ref<any>, defaultData?: Partial<any> | (() => Partial<any>), options?: ModalRefOption<T, U>, deps?: React.DependencyList): {
     modal: ModalRef<T, U>;
     data: T;
     setData: (data: T) => void;
