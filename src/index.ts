@@ -15,10 +15,13 @@ type CancelModalMethod = (ex?: any, onDone?: () => void) => Promise<void>;
 
 
 export type ModalRefOption<T, U> = {
-  beforeModal?: (newData: Partial<any>, pause: (result: any, isError?: boolean) => void, options: Record<string, any>) => any;
-  init?: (newData: Partial<any>, options: Record<string, any>) => void;
-  beforeCloseModal?: (next: (ok: any) => void, action: ModalAction, modal: ModalRef<T, U>) => void;
-  afterCloseModal?: (newData: Partial<any>, action: ModalAction, modal: ModalRef<T, U>) => void;
+  beforeModal?: (
+    newData: Partial<T>,
+    pause: (result: any, isError?: boolean) => void, options: Record<string, any>
+  ) => void | Partial<T> | Promise<void | Partial<T>>;
+  init?: (newData: T, options: Record<string, any>) => void | Promise<void>;
+  beforeCloseModal?: (next: (ok: any) => void, action: ModalAction, modal: ModalRef<T, U>) => void | Promise<void>;
+  afterCloseModal?: (newData: T, action: ModalAction, modal: ModalRef<T, U>) => void | Promise<void>;
 
   [key: string]: any
 }
@@ -27,7 +30,9 @@ export type ModalAction = 'end'|'cancel';
 
 export interface ModalRef<T extends Partial<any>, U = any> {
   readonly visible: boolean;
-  readonly data: T,
+  readonly data: Partial<Omit<T, 'onCancel'|'onOK'>> & {
+    [key: string]: any
+  },
   readonly props: {
     visible: boolean;
     onCancel: () => void
@@ -53,9 +58,9 @@ export interface ModalData extends Partial<any> {
   [key: string]: any;
 }
 
-function useModalRef<T extends Partial<any> = ModalData, U = any>(
+function useModalRef<T extends Partial<any>, U = any>(
   ref: React.Ref<any>,
-  defaultData: Partial<any>|(() => Partial<any>) = {},
+  defaultData: Partial<T>|(() => Partial<T>) = {},
   options: ModalRefOption<T, U> = {},
   deps: React.DependencyList = []
 ) {
@@ -90,7 +95,7 @@ function useModalRef<T extends Partial<any> = ModalData, U = any>(
         return props.options;
       },
 
-      modal(newData: T = {} as any, options: Record<string, any> = {}): Promise<U> {
+      modal(newData: Partial<T>, options: Record<string, any> = {}): Promise<U> {
         return new Promise(async (resolve, reject) => {
           if (props.visible) return;
 
