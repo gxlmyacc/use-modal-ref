@@ -102,20 +102,22 @@ function useModalRef<T extends Partial<any>, U = any>(
           Object.assign(this.options, options);
 
           if (this.beforeModal) {
-            let pause: any = false;
+            let pauseResult: any;
+            let pause = false;
             let isError = false;
             newData = await this.beforeModal(
               newData,
-              (result = 'cancel', _isError = false) => {
-                pause = result;
+              (result: any, _isError = false) => {
+                pause = true;
+                pauseResult = result;
                 isError = _isError;
               },
               options
             ) || newData;
-            if (pause || isError) {
+            if (pause) {
               const checkIsError = (v: any) => {
-                if (pause === 'cancel'
-                || pause instanceof Error
+                if (v === 'cancel'
+                || v instanceof Error
                 || isError) {
                   return true;
                 }
@@ -126,7 +128,7 @@ function useModalRef<T extends Partial<any>, U = any>(
                 if (v && v.success === false) return true;
                 return false;
               };
-              return checkIsError(pause) ? reject(pause) : resolve(pause);
+              return checkIsError(pauseResult) ? reject(pauseResult) : resolve(pauseResult);
             }
           }
 
