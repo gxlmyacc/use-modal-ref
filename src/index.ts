@@ -76,8 +76,10 @@ function useModalRef<T extends Partial<any>, U = any>(
           data: resolveDefaultData(defaultData),
           options: {}
         }));
-  const [$refs] = useState({ props });
+
+  const [$refs] = useState({ } as { props: typeof props, defaultData: typeof defaultData });
   $refs.props = props;
+  $refs.defaultData = defaultData;
 
   const modal = useMemo<ModalRef<T, U>>(() => {
     const ret: ModalRef<T, U> = {
@@ -168,7 +170,7 @@ function useModalRef<T extends Partial<any>, U = any>(
           };
           Object.assign($refs.props, {
             data: {
-              ...(resolveDefaultData(defaultData) || {}),
+              ...(resolveDefaultData($refs.defaultData) || {}),
               ...newData,
             },
             visible: {
@@ -214,7 +216,7 @@ function useModalRef<T extends Partial<any>, U = any>(
 
     return ret;
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [defaultData, props]);
+  }, [$refs]);
 
   useImperativeHandle(ref, () => modal, [modal]);
 
@@ -228,9 +230,20 @@ function useModalRef<T extends Partial<any>, U = any>(
   }, [modal, options, ...deps]);
 
   const setData = useCallback(
-    (data: T) => setProps({ ...$refs.props, data }),
+    (newData: T|((data: T) => T)) => {
+      if (typeof newData === 'function') {
+        return setProps(props => ({
+          ...props,
+          data: {
+            ...props.data,
+            ...(newData as any)(props.data)
+          }
+        }));
+      }
+      return setProps({ ...$refs.props, data: { ...$refs.props.data, newData } });
+    },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [props],
+    [$refs],
   );
 
   return {

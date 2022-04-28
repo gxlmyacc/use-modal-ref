@@ -37,6 +37,6 @@ declare function useModalRef<T extends Partial<any>, U = any>(ref: React.Ref<any
     data: Partial<Omit<T, "onOK" | "onCancel">> & {
         [key: string]: any;
     };
-    setData: (data: T) => void;
+    setData: (newData: T | ((data: T) => T)) => void;
 };
 export default useModalRef;
