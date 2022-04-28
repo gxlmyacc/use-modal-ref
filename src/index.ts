@@ -76,28 +76,30 @@ function useModalRef<T extends Partial<any>, U = any>(
           data: resolveDefaultData(defaultData),
           options: {}
         }));
+  const [$refs] = useState({ props });
+  $refs.props = props;
 
   const modal = useMemo<ModalRef<T, U>>(() => {
     const ret: ModalRef<T, U> = {
       get visible() {
-        return Boolean(props.visible);
+        return Boolean($refs.props.visible);
       },
       get data(): Omit<T, 'onCancel'|'onOK'> {
-        return props.data;
+        return $refs.props.data;
       },
       get props() {
         return {
-          visible: Boolean(props.visible),
+          visible: Boolean($refs.props.visible),
           onCancel: this.cancelModal as CancelModalMethod,
         };
       },
       get options() {
-        return props.options;
+        return $refs.props.options;
       },
 
       modal(newData: Partial<T>, options: Record<string, any> = {}): Promise<U> {
         return new Promise(async (resolve, reject) => {
-          if (props.visible) return;
+          if ($refs.props.visible) return;
 
           Object.assign(this.options, options);
 
@@ -144,8 +146,8 @@ function useModalRef<T extends Partial<any>, U = any>(
 
           const closeFn = async function (cb: () => any, action: ModalAction) {
             const close = function () {
-              Object.assign(props, { visible: false });
-              setProps({ ...props });
+              Object.assign($refs.props, { visible: false });
+              setProps({ ...$refs.props });
 
               setTimeout(() => {
                 this.afterCloseModal && this.afterCloseModal(this.data, action, this);
@@ -164,7 +166,7 @@ function useModalRef<T extends Partial<any>, U = any>(
 
             return close.call(this);
           };
-          Object.assign(props, {
+          Object.assign($refs.props, {
             data: {
               ...(resolveDefaultData(defaultData) || {}),
               ...newData,
@@ -190,7 +192,7 @@ function useModalRef<T extends Partial<any>, U = any>(
               },
             },
           });
-          setProps({ ...props });
+          setProps({ ...$refs.props });
 
           setTimeout(() => {
             const { init: _init } = this;
@@ -201,12 +203,12 @@ function useModalRef<T extends Partial<any>, U = any>(
     } as any;
 
     ret.endModal = (async function (result?: any, onDone?: () => void) {
-      props.visible && (await props.visible.resolve.call(this, result));
+      $refs.props.visible && (await $refs.props.visible.resolve.call(this, result));
       typeof onDone === 'function' && onDone();
     }).bind(ret);
 
     ret.cancelModal = (async function (ex?: any, onDone?: () => void) {
-      props.visible && (await props.visible.reject.call(this, ex || 'cancel'));
+      $refs.props.visible && (await $refs.props.visible.reject.call(this, ex || 'cancel'));
       typeof onDone === 'function' && onDone();
     }).bind(ret);
 
@@ -226,7 +228,7 @@ function useModalRef<T extends Partial<any>, U = any>(
   }, [modal, options, ...deps]);
 
   const setData = useCallback(
-    (data: T) => setProps({ ...props, data }),
+    (data: T) => setProps({ ...$refs.props, data }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [props],
   );
