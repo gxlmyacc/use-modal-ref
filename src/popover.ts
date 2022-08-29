@@ -1,0 +1,12 @@
+import useCommonRef, { ModalRefOption } from './common';
+
+function usePopoverRef<T extends Partial<any>, U = any>(
+  ref: React.Ref<any>,
+  defaultData: Partial<T>|(() => Partial<T>) = {},
+  options: ModalRefOption<'popover', T, U> = {},
+  deps: React.DependencyList = []
+) {
+  return useCommonRef('popover', ref, defaultData, options, deps);
+}
+
+export default usePopoverRef;
