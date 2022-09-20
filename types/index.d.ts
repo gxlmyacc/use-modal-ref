@@ -1,6 +1,7 @@
 import useModalRef from './modal';
 import useDrawerRef from './drawer';
 import usePopoverRef from './popover';
-import useCommonRef, { mergeModalType } from './common';
-export { useDrawerRef, usePopoverRef, useCommonRef, mergeModalType };
+import useCommonRef from './common';
+export * from './common';
+export { useDrawerRef, usePopoverRef, useCommonRef, };
 export default useModalRef;

@@ -65,7 +65,7 @@ export type ModalPropsTypeMap = {
     onClose: () => void,
   },
 };
-export interface ModalRef<P extends ModalType, T extends Partial<any>, U = any> {
+export interface ModalRef<P extends ModalType, T, U = any> {
   readonly visible: boolean;
   readonly data: Partial<Omit<T, 'onCancel'|'onOK'>> & {
     [key: string]: any
@@ -92,7 +92,7 @@ export interface ModalData extends Partial<any> {
   [key: string]: any;
 }
 
-function useCommonRef<P extends ModalType, T extends Partial<any>, U = any>(
+function useCommonRef<P extends ModalType, T, U = any>(
   modalType: P,
   ref: React.Ref<any>,
   defaultData: Partial<T>|(() => Partial<T>) = {},
@@ -116,143 +116,143 @@ function useCommonRef<P extends ModalType, T extends Partial<any>, U = any>(
   $refs.props = props;
   $refs.defaultData = defaultData;
 
-  const modal = useMemo<ModalRef<P, T, U>>(() => {
-    const ret: ModalRef<P, T, U> = {
-      get visible() {
-        return Boolean($refs.props.visible);
-      },
-      get data(): Omit<T, 'onCancel'|'onOK'> {
-        return $refs.props.data;
-      },
-      get props() {
-        const map = modalTypeMap[modalType];
-        return {
-          [map.visible]: $refs.props.visible,
-          [map.onClose]: this.cancelModal as CancelModalMethod,
-        };
-      },
-      get options() {
-        return $refs.props.options;
-      },
+  const modal = useMemo<ModalRef<P, T, U>>(
+    () => {
+      const ret: ModalRef<P, T, U> = {
+        get visible() {
+          return Boolean($refs.props.visible);
+        },
+        get data(): Omit<T, 'onCancel'|'onOK'> {
+          return $refs.props.data;
+        },
+        get props() {
+          const map = modalTypeMap[modalType];
+          return {
+            [map.visible]: $refs.props.visible,
+            [map.onClose]: this.cancelModal as CancelModalMethod,
+          };
+        },
+        get options() {
+          return $refs.props.options;
+        },
 
-      modal(newData: Partial<T>, options: Record<string, any> = {}): Promise<U> {
-        return new Promise(async (resolve, reject) => {
-          if ($refs.props.visible) return;
+        modal(newData: Partial<T> = {}, options: Record<string, any> = {}): Promise<U> {
+          return new Promise(async (resolve, reject) => {
+            if ($refs.props.visible) return;
 
-          Object.assign(this.options, options);
+            Object.assign(this.options, options);
+            const defaultData = (resolveDefaultData($refs.defaultData) || {});
+            let newModalData: T = { ...defaultData, ...newData };
 
-          if (this.beforeModal) {
-            let pauseResult: any;
-            let pause = false;
-            let isError = false;
-            newData = await this.beforeModal(
-              newData,
-              (result: any, _isError = false) => {
-                pause = true;
-                pauseResult = result;
-                isError = _isError;
-              },
-              options
-            ) || newData;
-            if (pause) {
-              const checkIsError = (v: any) => {
-                if (v === 'cancel'
+            if (this.beforeModal) {
+              let pauseResult: any;
+              let pause = false;
+              let isError = false;
+              const result = await this.beforeModal(
+                newModalData,
+                (result: any, _isError = false) => {
+                  pause = true;
+                  pauseResult = result;
+                  isError = _isError;
+                },
+                options
+              ) || newModalData;
+              if (result && result !== newModalData) newModalData = { ...defaultData, ...result };
+
+              if (pause) {
+                const checkIsError = (v: any) => {
+                  if (v === 'cancel'
                 || v instanceof Error
                 || isError) {
-                  return true;
-                }
-                if (v && v.head) {
-                  if (v.head.status && v.head.status !== 'Y') return true;
-                  if (v.head.code && v.head.code !== '00000000') return true;
-                }
-                if (v && v.success === false) return true;
-                return false;
+                    return true;
+                  }
+                  if (v && v.head) {
+                    if (v.head.status && v.head.status !== 'Y') return true;
+                    if (v.head.code && v.head.code !== '00000000') return true;
+                  }
+                  if (v && v.success === false) return true;
+                  return false;
+                };
+                return checkIsError(pauseResult) ? reject(pauseResult) : resolve(pauseResult);
+              }
+            }
+
+            const dataEvents: Record<string, (value: any) => any> = {};
+            DATA_EVENTS.forEach((key: string) => {
+              if (!(newModalData as any)[key]) return;
+              dataEvents[key] = (newModalData as any)[key];
+              delete (newModalData as any)[key];
+            });
+
+            const closeFn = async function (cb: () => any, action: ModalAction) {
+              const close = function () {
+                Object.assign($refs.props, { visible: false });
+                setProps({ ...$refs.props });
+
+                setTimeout(() => {
+                  this.afterCloseModal && this.afterCloseModal(this.data, action, this);
+                });
+
+                return cb();
               };
-              return checkIsError(pauseResult) ? reject(pauseResult) : resolve(pauseResult);
-            }
-          }
 
-          newData = { ...newData };
-          const dataEvents: {
-            [key: string]: (value: any) => any
-          } = {};
-          DATA_EVENTS.forEach((key: string) => {
-            if (!(newData as any)[key]) return;
-            dataEvents[key] = (newData as any)[key];
-            delete (newData as any)[key];
-          });
+              if (this.beforeCloseModal) {
+                return this.beforeCloseModal(
+                  (ok: any) => ((ok !== false) && close()),
+                  action,
+                  this,
+                );
+              }
 
-          const closeFn = async function (cb: () => any, action: ModalAction) {
-            const close = function () {
-              Object.assign($refs.props, { visible: false });
-              setProps({ ...$refs.props });
-
-              setTimeout(() => {
-                this.afterCloseModal && this.afterCloseModal(this.data, action, this);
-              });
-
-              return cb();
+              return close.call(this);
             };
-
-            if (this.beforeCloseModal) {
-              return this.beforeCloseModal(
-                (ok: any) => ((ok !== false) && close()),
-                action,
-                this,
-              );
-            }
-
-            return close.call(this);
-          };
-          Object.assign($refs.props, {
-            data: {
-              ...(resolveDefaultData($refs.defaultData) || {}),
-              ...newData,
-            },
-            visible: {
-              resolve(value: any) {
-                return closeFn.call(this, async () => {
-                  if (dataEvents.onOK) {
-                    const newValue = await dataEvents.onOK(value);
-                    if (newValue !== undefined) value = newValue;
-                  }
-                  return resolve(value);
-                }, 'end');
+            Object.assign($refs.props, {
+              data: newModalData,
+              visible: {
+                resolve(value: any) {
+                  return closeFn.call(this, async () => {
+                    if (dataEvents.onOK) {
+                      const newValue = await dataEvents.onOK(value);
+                      if (newValue !== undefined) value = newValue;
+                    }
+                    return resolve(value);
+                  }, 'end');
+                },
+                reject(value: any) {
+                  return closeFn.call(this, async () => {
+                    if (dataEvents.onCancel) {
+                      const newValue = await dataEvents.onCancel(value);
+                      if (newValue !== undefined) value = newValue;
+                    }
+                    return reject(value);
+                  }, 'cancel');
+                },
               },
-              reject(value: any) {
-                return closeFn.call(this, async () => {
-                  if (dataEvents.onCancel) {
-                    const newValue = await dataEvents.onCancel(value);
-                    if (newValue !== undefined) value = newValue;
-                  }
-                  return reject(value);
-                }, 'cancel');
-              },
-            },
+            });
+            setProps({ ...$refs.props });
+
+            setTimeout(() => {
+              const { init: _init } = this;
+              this.visible && _init && _init.call(this, newData, options);
+            });
           });
-          setProps({ ...$refs.props });
+        },
+      } as any;
 
-          setTimeout(() => {
-            const { init: _init } = this;
-            this.visible && _init && _init.call(this, newData, options);
-          });
-        });
-      },
-    } as any;
+      ret.endModal = (async function (result?: any, onDone?: () => void) {
+        $refs.props.visible && (await $refs.props.visible.resolve.call(this, result));
+        isFunction(onDone) && onDone();
+      }).bind(ret);
 
-    ret.endModal = (async function (result?: any, onDone?: () => void) {
-      $refs.props.visible && (await $refs.props.visible.resolve.call(this, result));
-      isFunction(onDone) && onDone();
-    }).bind(ret);
+      ret.cancelModal = (async function (ex?: any, onDone?: () => void) {
+        $refs.props.visible && (await $refs.props.visible.reject.call(this, ex || 'cancel'));
+        isFunction(onDone) && onDone();
+      }).bind(ret);
 
-    ret.cancelModal = (async function (ex?: any, onDone?: () => void) {
-      $refs.props.visible && (await $refs.props.visible.reject.call(this, ex || 'cancel'));
-      isFunction(onDone) && onDone();
-    }).bind(ret);
-
-    return ret;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [$refs]);
+      return ret;
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [$refs]
+  );
 
   useImperativeHandle(ref, () => modal, [modal]);
 
