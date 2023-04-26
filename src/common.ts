@@ -7,7 +7,7 @@ function resolveDefaultData(data: any) {
   return data;
 }
 
-const MODAL_EVENTS = ['beforeModal', 'init', 'beforeCloseModal', 'afterCloseModal'];
+const MODAL_EVENTS = ['beforeModal', 'init', 'afterModal', 'beforeCloseModal', 'afterCloseModal'];
 
 const DATA_EVENTS = ['onOK', 'onCancel'];
 
@@ -24,6 +24,16 @@ export type ModalRefOption<P extends ModalType, T, U> = {
   beforeCloseModal?: (next: (ok: any) => void, action: ModalAction, modal: ModalRef<P, T, U>) => void | Promise<void>;
   afterCloseModal?: (newData: T, action: ModalAction, modal: ModalRef<P, T, U>) => void | Promise<void>;
 
+  [key: string]: any
+}
+
+export type ModalModalOptions = {
+  afterModal?: (newData: any, options?: ModalModalOptions) => void,
+  beforeCloseModal?: (next: (ok: any) => void, action: ModalAction) => void | Promise<void>,
+  beforeEndModal?: (value?: any) => Promise<void>,
+  beforeCancelModal?: (reason?: any) => Promise<void>,
+
+  alwaysResolve?: boolean,
   [key: string]: any
 }
 
@@ -70,9 +80,12 @@ export interface ModalRef<P extends ModalType, T, U = any> {
   readonly data: Partial<Omit<T, 'onCancel'|'onOK'>> & {
     [key: string]: any
   },
-  readonly props: ModalPropsTypeMap[P]
+  readonly props: ModalPropsTypeMap[P],
+  readonly options: ModalRefOption<P, T, U>,
+  readonly modalOptions: ModalModalOptions,
+  readonly modalPromise: null|Promise<any>|PromiseLike<any>,
 
-  modal(newData: T, options?: Record<string, any>): Promise<U>;
+  modal(newData: T, options?: ModalModalOptions): Promise<U>;
 
   endModal: EndModalMethod;
   cancelModal: CancelModalMethod;
@@ -105,11 +118,15 @@ function useCommonRef<P extends ModalType, T, U = any>(
       reject: (value: any) => any
         },
     data: T,
-    options: Record<string, any>
+    options: ModalRefOption<P, T, U>
+    modalOptions: ModalModalOptions,
+    promise: null|Promise<any>|PromiseLike<any>,
         }>(() => ({
           visible: false,
           data: resolveDefaultData(defaultData),
-          options: {}
+          options: {},
+          modalOptions: {},
+          promise: null,
         }));
 
   const [$refs] = useState({ } as { props: typeof props, defaultData: typeof defaultData });
@@ -127,20 +144,27 @@ function useCommonRef<P extends ModalType, T, U = any>(
         },
         get props() {
           const map = modalTypeMap[modalType];
+          let visibleKey = this.options.visibleKey || map.visible;
           return {
-            [map.visible]: $refs.props.visible,
+            [visibleKey]: $refs.props.visible,
             [map.onClose]: this.cancelModal as CancelModalMethod,
           };
+        },
+        get modalPromise() {
+          return $refs.props.promise;
         },
         get options() {
           return $refs.props.options;
         },
+        get modalOptions() {
+          return $refs.props.modalOptions;
+        },
 
-        modal(newData: Partial<T> = {}, options: Record<string, any> = {}): Promise<U> {
-          return new Promise(async (resolve, reject) => {
+        modal(newData: Partial<T> = {}, options: ModalModalOptions = {}): Promise<U> {
+          const promise = new Promise<U>(async (resolve, reject) => {
             if ($refs.props.visible) return;
+            $refs.props.modalOptions = options || {};
 
-            Object.assign(this.options, options);
             const defaultData = (resolveDefaultData($refs.defaultData) || {});
             let newModalData: T = { ...defaultData, ...newData };
 
@@ -184,9 +208,9 @@ function useCommonRef<P extends ModalType, T, U = any>(
               delete (newModalData as any)[key];
             });
 
-            const closeFn = async function (cb: () => any, action: ModalAction) {
+            const closeFn = function (cb: () => any, action: ModalAction) {
               const close = function () {
-                Object.assign($refs.props, { visible: false });
+                Object.assign($refs.props, { visible: false, promise: null });
                 setProps({ ...$refs.props });
 
                 setTimeout(() => {
@@ -196,15 +220,25 @@ function useCommonRef<P extends ModalType, T, U = any>(
                 return cb();
               };
 
+              const modalClose = () => {
+                if (options.beforeCloseModal) {
+                  return options.beforeCloseModal(
+                    (ok: any) => ((ok !== false) && close.call(this)),
+                    action,
+                  );
+                }
+                return close.call(this);
+              };
+
               if (this.beforeCloseModal) {
                 return this.beforeCloseModal(
-                  (ok: any) => ((ok !== false) && close()),
+                  (ok: any) => ((ok !== false) && modalClose.call(this)),
                   action,
                   this,
                 );
               }
 
-              return close.call(this);
+              return modalClose.call(this);
             };
             Object.assign($refs.props, {
               data: newModalData,
@@ -215,15 +249,18 @@ function useCommonRef<P extends ModalType, T, U = any>(
                       const newValue = await dataEvents.onOK(value);
                       if (newValue !== undefined) value = newValue;
                     }
+                    if (this.modalOptions.beforeEndModal) await this.modalOptions.beforeEndModal(value);
                     return resolve(value);
                   }, 'end');
                 },
                 reject(value: any) {
+                  if (options.alwaysResolve) return this.resolve(value);
                   return closeFn.call(this, async () => {
                     if (dataEvents.onCancel) {
                       const newValue = await dataEvents.onCancel(value);
                       if (newValue !== undefined) value = newValue;
                     }
+                    if (this.modalOptions.beforeCancelModal) await this.modalOptions.beforeCancelModal(value);
                     return reject(value);
                   }, 'cancel');
                 },
@@ -232,10 +269,15 @@ function useCommonRef<P extends ModalType, T, U = any>(
             setProps({ ...$refs.props });
 
             setTimeout(() => {
-              const { init: _init } = this;
-              this.visible && _init && _init.call(this, newData, options);
+              const { init: _init, afterModal } = this;
+              if (this.visible) {
+                _init && _init.call(this, newData, options);
+                afterModal && afterModal.call(this, newData, options);
+              }
             });
           });
+          $refs.props.promise = promise;
+          return promise;
         },
       } as any;
 

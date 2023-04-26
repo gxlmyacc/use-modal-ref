@@ -8,6 +8,14 @@ export declare type ModalRefOption<P extends ModalType, T, U> = {
     afterCloseModal?: (newData: T, action: ModalAction, modal: ModalRef<P, T, U>) => void | Promise<void>;
     [key: string]: any;
 };
+export declare type ModalModalOptions = {
+    afterModal?: (newData: any, options?: ModalModalOptions) => void;
+    beforeCloseModal?: (next: (ok: any) => void, action: ModalAction) => void | Promise<void>;
+    beforeEndModal?: (value?: any) => Promise<void>;
+    beforeCancelModal?: (reason?: any) => Promise<void>;
+    alwaysResolve?: boolean;
+    [key: string]: any;
+};
 export declare type ModalAction = 'end' | 'cancel';
 export declare type ModalType = 'modal' | 'drawer' | 'popover';
 export declare type ModalTypeMap = Record<string, {
@@ -34,7 +42,10 @@ export interface ModalRef<P extends ModalType, T, U = any> {
         [key: string]: any;
     };
     readonly props: ModalPropsTypeMap[P];
-    modal(newData: T, options?: Record<string, any>): Promise<U>;
+    readonly options: ModalRefOption<P, T, U>;
+    readonly modalOptions: ModalModalOptions;
+    readonly modalPromise: null | Promise<any> | PromiseLike<any>;
+    modal(newData: T, options?: ModalModalOptions): Promise<U>;
     endModal: EndModalMethod;
     cancelModal: CancelModalMethod;
     [key: string]: any;
