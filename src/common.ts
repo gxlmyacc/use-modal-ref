@@ -20,6 +20,7 @@ export type ModalRefOption<P extends ModalType, T, U> = {
     newData: Partial<T>,
     pause: (result: any, isError?: boolean) => void, options: Record<string, any>
   ) => void | Partial<T> | Promise<void | Partial<T>>;
+  afterModal?: (newData: any, options?: ModalModalOptions) => void,
   init?: (newData: T, options: Record<string, any>) => void | Promise<void>;
   beforeCloseModal?: (next: (ok: any) => void, action: ModalAction, modal: ModalRef<P, T, U>) => void | Promise<void>;
   afterCloseModal?: (newData: T, action: ModalAction, modal: ModalRef<P, T, U>) => void | Promise<void>;
@@ -28,10 +29,12 @@ export type ModalRefOption<P extends ModalType, T, U> = {
 }
 
 export type ModalModalOptions = {
+  modalDataEvent?: boolean,
   afterModal?: (newData: any, options?: ModalModalOptions) => void,
   beforeCloseModal?: (next: (ok: any) => void, action: ModalAction) => void | Promise<void>,
-  beforeEndModal?: (value?: any) => Promise<void>,
-  beforeCancelModal?: (reason?: any) => Promise<void>,
+  beforeEndModal?: (value?: any) => Promise<any>,
+  beforeCancelModal?: (reason?: any) => Promise<any>,
+  afterCloseModal?: (newData: any, action: ModalAction) => void | Promise<void>;
 
   alwaysResolve?: boolean,
   [key: string]: any
@@ -202,11 +205,13 @@ function useCommonRef<P extends ModalType, T, U = any>(
             }
 
             const dataEvents: Record<string, (value: any) => any> = {};
-            DATA_EVENTS.forEach((key: string) => {
-              if (!(newModalData as any)[key]) return;
-              dataEvents[key] = (newModalData as any)[key];
-              delete (newModalData as any)[key];
-            });
+            if (this.modalOptions.modalDataEvent) {
+              DATA_EVENTS.forEach((key: string) => {
+                if (!(newModalData as any)[key]) return;
+                dataEvents[key] = (newModalData as any)[key];
+                delete (newModalData as any)[key];
+              });
+            }
 
             const closeFn = function (cb: () => any, action: ModalAction) {
               const close = function () {
@@ -215,14 +220,15 @@ function useCommonRef<P extends ModalType, T, U = any>(
 
                 setTimeout(() => {
                   this.afterCloseModal && this.afterCloseModal(this.data, action, this);
+                  this.modalOptions.afterCloseModal && this.modalOptions.afterCloseModal(this.data, action, this);
                 });
 
                 return cb();
               };
 
               const modalClose = () => {
-                if (options.beforeCloseModal) {
-                  return options.beforeCloseModal(
+                if (this.modalOptions.beforeCloseModal) {
+                  return this.modalOptions.beforeCloseModal(
                     (ok: any) => ((ok !== false) && close.call(this)),
                     action,
                   );
@@ -249,18 +255,24 @@ function useCommonRef<P extends ModalType, T, U = any>(
                       const newValue = await dataEvents.onOK(value);
                       if (newValue !== undefined) value = newValue;
                     }
-                    if (this.modalOptions.beforeEndModal) await this.modalOptions.beforeEndModal(value);
+                    if (this.modalOptions.beforeEndModal) {
+                      const newValue = await this.modalOptions.beforeEndModal(value);
+                      if (newValue !== undefined) value = newValue;
+                    }
                     return resolve(value);
                   }, 'end');
                 },
                 reject(value: any) {
-                  if (options.alwaysResolve) return this.resolve(value);
+                  if (this.modalOptions.alwaysResolve) return this.resolve(value);
                   return closeFn.call(this, async () => {
                     if (dataEvents.onCancel) {
                       const newValue = await dataEvents.onCancel(value);
                       if (newValue !== undefined) value = newValue;
                     }
-                    if (this.modalOptions.beforeCancelModal) await this.modalOptions.beforeCancelModal(value);
+                    if (this.modalOptions.beforeCancelModal) {
+                      const newValue = await this.modalOptions.beforeCancelModal(value);
+                      if (newValue !== undefined) value = newValue;
+                    }
                     return reject(value);
                   }, 'cancel');
                 },
@@ -269,10 +281,11 @@ function useCommonRef<P extends ModalType, T, U = any>(
             setProps({ ...$refs.props });
 
             setTimeout(() => {
-              const { init: _init, afterModal } = this;
+              const { init: _init, afterModal, modalOptions } = this;
               if (this.visible) {
-                _init && _init.call(this, newData, options);
-                afterModal && afterModal.call(this, newData, options);
+                _init && _init.call(this, newData, modalOptions);
+                afterModal && afterModal.call(this, newData, modalOptions);
+                modalOptions.afterModal && afterModal.call(this, newData, modalOptions);
               }
             });
           });

@@ -3,16 +3,19 @@ declare type EndModalMethod = (result?: any, onDone?: () => void) => Promise<voi
 declare type CancelModalMethod = (ex?: any, onDone?: () => void) => Promise<void>;
 export declare type ModalRefOption<P extends ModalType, T, U> = {
     beforeModal?: (newData: Partial<T>, pause: (result: any, isError?: boolean) => void, options: Record<string, any>) => void | Partial<T> | Promise<void | Partial<T>>;
+    afterModal?: (newData: any, options?: ModalModalOptions) => void;
     init?: (newData: T, options: Record<string, any>) => void | Promise<void>;
     beforeCloseModal?: (next: (ok: any) => void, action: ModalAction, modal: ModalRef<P, T, U>) => void | Promise<void>;
     afterCloseModal?: (newData: T, action: ModalAction, modal: ModalRef<P, T, U>) => void | Promise<void>;
     [key: string]: any;
 };
 export declare type ModalModalOptions = {
+    modalDataEvent?: boolean;
     afterModal?: (newData: any, options?: ModalModalOptions) => void;
     beforeCloseModal?: (next: (ok: any) => void, action: ModalAction) => void | Promise<void>;
-    beforeEndModal?: (value?: any) => Promise<void>;
-    beforeCancelModal?: (reason?: any) => Promise<void>;
+    beforeEndModal?: (value?: any) => Promise<any>;
+    beforeCancelModal?: (reason?: any) => Promise<any>;
+    afterCloseModal?: (newData: any, action: ModalAction) => void | Promise<void>;
     alwaysResolve?: boolean;
     [key: string]: any;
 };
