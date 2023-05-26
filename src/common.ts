@@ -149,7 +149,7 @@ function useCommonRef<P extends ModalType, T, U = any>(
           const map = modalTypeMap[modalType];
           let visibleKey = this.options.visibleKey || map.visible;
           return {
-            [visibleKey]: $refs.props.visible,
+            [visibleKey]: Boolean($refs.props.visible),
             [map.onClose]: this.cancelModal as CancelModalMethod,
           };
         },
@@ -259,11 +259,15 @@ function useCommonRef<P extends ModalType, T, U = any>(
                       const newValue = await this.modalOptions.beforeEndModal(value);
                       if (newValue !== undefined) value = newValue;
                     }
-                    return resolve(value);
+                    resolve(value);
+                    return value;
                   }, 'end');
                 },
                 reject(value: any) {
-                  if (this.modalOptions.alwaysResolve) return this.resolve(value);
+                  if (this.modalOptions.alwaysResolve) {
+                    this.resolve(value);
+                    return value;
+                  }
                   return closeFn.call(this, async () => {
                     if (dataEvents.onCancel) {
                       const newValue = await dataEvents.onCancel(value);
@@ -273,7 +277,8 @@ function useCommonRef<P extends ModalType, T, U = any>(
                       const newValue = await this.modalOptions.beforeCancelModal(value);
                       if (newValue !== undefined) value = newValue;
                     }
-                    return reject(value);
+                    reject(value);
+                    return value;
                   }, 'cancel');
                 },
               },
@@ -295,13 +300,15 @@ function useCommonRef<P extends ModalType, T, U = any>(
       } as any;
 
       ret.endModal = (async function (result?: any, onDone?: () => void) {
-        $refs.props.visible && (await $refs.props.visible.resolve.call(this, result));
+        const ret = $refs.props.visible && (await $refs.props.visible.resolve.call(this, result));
         isFunction(onDone) && onDone();
+        return ret;
       }).bind(ret);
 
       ret.cancelModal = (async function (ex?: any, onDone?: () => void) {
-        $refs.props.visible && (await $refs.props.visible.reject.call(this, ex || 'cancel'));
+        const ret = $refs.props.visible && (await $refs.props.visible.reject.call(this, ex || 'cancel'));
         isFunction(onDone) && onDone();
+        return ret;
       }).bind(ret);
 
       return ret;
