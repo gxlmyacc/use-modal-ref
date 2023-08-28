@@ -213,8 +213,10 @@ function useCommonRef<P extends ModalType, T, U = any>(
               });
             }
 
-            const closeFn = function (cb: () => any, action: ModalAction) {
-              const close = function () {
+            const closeFn = function (before: () => any, action: ModalAction) {
+              const close = async function () {
+                before && (await before());
+
                 Object.assign($refs.props, { visible: false, promise: null });
                 setProps({ ...$refs.props });
 
@@ -222,8 +224,6 @@ function useCommonRef<P extends ModalType, T, U = any>(
                   this.afterCloseModal && this.afterCloseModal(this.data, action, this);
                   this.modalOptions.afterCloseModal && this.modalOptions.afterCloseModal(this.data, action, this);
                 });
-
-                return cb();
               };
 
               const modalClose = () => {

@@ -110,11 +110,18 @@ const TestDrawer = React.forwardRef((props = {}, ref) => {
     modal,
     data: {
       title,
-      label = 'default label'
+      label,
+      desc
     },
-  } = useDrawerRef(ref, {}, {
+  } = useDrawerRef(ref, {
+    title: 'default title',
+    label: 'default label'
+  }, {
     beforeModal: async (data = {}) => {
-      if (!data.title) data.title = 'default title';
+      return {
+        ...data,
+        desc: 'desc'
+      }
     },
   });
 
@@ -138,6 +145,7 @@ const TestDrawer = React.forwardRef((props = {}, ref) => {
       )}
     >
       <div>{label}</div>
+      <div>{desc}</div>
       <Input 
         value={inputValue} 
         onChange={e => setInputValue(e.target.value)} 
