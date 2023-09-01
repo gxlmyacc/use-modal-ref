@@ -213,17 +213,20 @@ function useCommonRef<P extends ModalType, T, U = any>(
               });
             }
 
-            const closeFn = function (before: () => any, action: ModalAction) {
+            const closeFn = function (before: (next: (() => void)) => any, action: ModalAction) {
               const close = async function () {
-                before && (await before());
+                const _close = () => {
+                  Object.assign($refs.props, { visible: false, promise: null });
+                  setProps({ ...$refs.props });
 
-                Object.assign($refs.props, { visible: false, promise: null });
-                setProps({ ...$refs.props });
+                  setTimeout(() => {
+                    this.afterCloseModal && this.afterCloseModal(this.data, action, this);
+                    this.modalOptions.afterCloseModal && this.modalOptions.afterCloseModal(this.data, action, this);
+                  });
+                };
 
-                setTimeout(() => {
-                  this.afterCloseModal && this.afterCloseModal(this.data, action, this);
-                  this.modalOptions.afterCloseModal && this.modalOptions.afterCloseModal(this.data, action, this);
-                });
+                if (before) await before(_close);
+                else _close();
               };
 
               const modalClose = () => {
@@ -250,7 +253,7 @@ function useCommonRef<P extends ModalType, T, U = any>(
               data: newModalData,
               visible: {
                 resolve(value: any) {
-                  return closeFn.call(this, async () => {
+                  return closeFn.call(this, async next => {
                     if (dataEvents.onOK) {
                       const newValue = await dataEvents.onOK(value);
                       if (newValue !== undefined) value = newValue;
@@ -260,6 +263,7 @@ function useCommonRef<P extends ModalType, T, U = any>(
                       if (newValue !== undefined) value = newValue;
                     }
                     resolve(value);
+                    next();
                     return value;
                   }, 'end');
                 },
@@ -268,7 +272,7 @@ function useCommonRef<P extends ModalType, T, U = any>(
                     this.resolve(value);
                     return value;
                   }
-                  return closeFn.call(this, async () => {
+                  return closeFn.call(this, async next => {
                     if (dataEvents.onCancel) {
                       const newValue = await dataEvents.onCancel(value);
                       if (newValue !== undefined) value = newValue;
@@ -278,6 +282,7 @@ function useCommonRef<P extends ModalType, T, U = any>(
                       if (newValue !== undefined) value = newValue;
                     }
                     reject(value);
+                    next();
                     return value;
                   }, 'cancel');
                 },
