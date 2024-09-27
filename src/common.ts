@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useCallback, useImperativeHandle } from 'react';
+import ReactDOM from 'react-dom';
 import { isFunction } from './utils';
 
 function resolveDefaultData(data: any) {
@@ -15,7 +16,13 @@ type EndModalMethod = (result?: any, onDone?: () => void) => Promise<void>;
 type CancelModalMethod = (ex?: any, onDone?: () => void) => Promise<void>;
 
 
-export type ModalRefOption<P extends ModalType, T, U> = {
+export type ModalRefOption<
+  P extends ModalType,
+  T extends Record<string, any>,
+  U,
+  C extends Record<string, any> = Record<string, any>
+> = {
+  custom?: C,
   beforeModal?: (
     newData: Partial<T>,
     pause: (result: any, isError?: boolean) => void, options: Record<string, any>
@@ -36,6 +43,7 @@ export type ModalModalOptions = {
   beforeCancelModal?: (reason?: any) => Promise<any>,
   afterCloseModal?: (newData: any, action: ModalAction) => void | Promise<void>;
 
+  forceVisible?: boolean,
   alwaysResolve?: boolean,
   [key: string]: any
 }
@@ -78,13 +86,18 @@ export type ModalPropsTypeMap = {
     onClose: () => void,
   },
 };
-export interface ModalRef<P extends ModalType, T, U = any> {
+export type ModalRef<
+  P extends ModalType,
+  T extends Record<string, any>,
+  U = any,
+  C extends Record<string, any> = Record<string, any>
+> = {
   readonly visible: boolean;
   readonly data: Partial<Omit<T, 'onCancel'|'onOK'>> & {
     [key: string]: any
   },
   readonly props: ModalPropsTypeMap[P],
-  readonly options: ModalRefOption<P, T, U>,
+  readonly options: ModalRefOption<P, T, U, C>,
   readonly modalOptions: ModalModalOptions,
   readonly modalPromise: null|Promise<any>|PromiseLike<any>,
 
@@ -94,6 +107,8 @@ export interface ModalRef<P extends ModalType, T, U = any> {
   cancelModal: CancelModalMethod;
 
   [key: string]: any;
+} & {
+  [key in keyof C]: C[key];
 }
 
 export interface ModalResult<P extends ModalType, T = Partial<any>> {
@@ -108,20 +123,28 @@ export interface ModalData extends Partial<any> {
   [key: string]: any;
 }
 
-function useCommonRef<P extends ModalType, T, U = any>(
+export interface ModalVisibleProps {
+  pending?: Promise<any>,
+  resolve:(value: any) => any,
+  reject: (value: any) => any
+}
+
+function useCommonRef<
+  P extends ModalType,
+  T extends Record<string, any>,
+  U = any,
+  C extends Record<string, any> = Record<string, any>
+>(
   modalType: P,
   ref: React.Ref<any>,
   defaultData: Partial<T>|(() => Partial<T>) = {},
-  options: ModalRefOption<P, T, U> = {},
+  options: ModalRefOption<P, T, U, C> = {},
   deps: React.DependencyList = []
 ) {
   const [props, setProps] = useState<{
-    visible: false | {
-      resolve:(value: any) => any,
-      reject: (value: any) => any
-        },
+    visible: false | ModalVisibleProps,
     data: T,
-    options: ModalRefOption<P, T, U>
+    options: ModalRefOption<P, T, U, C>
     modalOptions: ModalModalOptions,
     promise: null|Promise<any>|PromiseLike<any>,
         }>(() => ({
@@ -136,9 +159,9 @@ function useCommonRef<P extends ModalType, T, U = any>(
   $refs.props = props;
   $refs.defaultData = defaultData;
 
-  const modal = useMemo<ModalRef<P, T, U>>(
+  const modal = useMemo<ModalRef<P, T, U, C>>(
     () => {
-      const ret: ModalRef<P, T, U> = {
+      const ret: ModalRef<P, T, U, C> = {
         get visible() {
           return Boolean($refs.props.visible);
         },
@@ -165,7 +188,19 @@ function useCommonRef<P extends ModalType, T, U = any>(
 
         modal(newData: Partial<T> = {}, options: ModalModalOptions = {}): Promise<U> {
           const promise = new Promise<U>(async (resolve, reject) => {
-            if ($refs.props.visible) return;
+            if ($refs.props.visible) {
+              if (!$refs.props.visible.pending) {
+                reject(new Error('modal is already opened!'));
+                return;
+              }
+              try {
+                await $refs.props.visible.pending;
+              } catch (error) {
+                // empty
+              }
+              if ($refs.props.visible) return;
+            }
+
             $refs.props.modalOptions = options || {};
 
             const defaultData = (resolveDefaultData($refs.defaultData) || {});
@@ -249,44 +284,45 @@ function useCommonRef<P extends ModalType, T, U = any>(
 
               return modalClose.call(this);
             };
+            const visibleRef: ModalVisibleProps = {
+              resolve(value: any) {
+                return visibleRef.pending = closeFn.call(this, async next => {
+                  if (dataEvents.onOK) {
+                    const newValue = await dataEvents.onOK(value);
+                    if (newValue !== undefined) value = newValue;
+                  }
+                  if (this.modalOptions.beforeEndModal) {
+                    const newValue = await this.modalOptions.beforeEndModal(value);
+                    if (newValue !== undefined) value = newValue;
+                  }
+                  resolve(value);
+                  next();
+                  return value;
+                }, 'end');
+              },
+              reject(value: any) {
+                if (this.modalOptions.alwaysResolve) {
+                  this.resolve(value);
+                  return value;
+                }
+                return visibleRef.pending = closeFn.call(this, async next => {
+                  if (dataEvents.onCancel) {
+                    const newValue = await dataEvents.onCancel(value);
+                    if (newValue !== undefined) value = newValue;
+                  }
+                  if (this.modalOptions.beforeCancelModal) {
+                    const newValue = await this.modalOptions.beforeCancelModal(value);
+                    if (newValue !== undefined) value = newValue;
+                  }
+                  reject(value);
+                  next();
+                  return value;
+                }, 'cancel');
+              },
+            };
             Object.assign($refs.props, {
               data: newModalData,
-              visible: {
-                resolve(value: any) {
-                  return closeFn.call(this, async next => {
-                    if (dataEvents.onOK) {
-                      const newValue = await dataEvents.onOK(value);
-                      if (newValue !== undefined) value = newValue;
-                    }
-                    if (this.modalOptions.beforeEndModal) {
-                      const newValue = await this.modalOptions.beforeEndModal(value);
-                      if (newValue !== undefined) value = newValue;
-                    }
-                    resolve(value);
-                    next();
-                    return value;
-                  }, 'end');
-                },
-                reject(value: any) {
-                  if (this.modalOptions.alwaysResolve) {
-                    this.resolve(value);
-                    return value;
-                  }
-                  return closeFn.call(this, async next => {
-                    if (dataEvents.onCancel) {
-                      const newValue = await dataEvents.onCancel(value);
-                      if (newValue !== undefined) value = newValue;
-                    }
-                    if (this.modalOptions.beforeCancelModal) {
-                      const newValue = await this.modalOptions.beforeCancelModal(value);
-                      if (newValue !== undefined) value = newValue;
-                    }
-                    reject(value);
-                    next();
-                    return value;
-                  }, 'cancel');
-                },
-              },
+              visible: visibleRef,
             });
             setProps({ ...$refs.props });
 
@@ -303,6 +339,10 @@ function useCommonRef<P extends ModalType, T, U = any>(
           return promise;
         },
       } as any;
+
+      if (options.custom) {
+        Object.assign(ret, options.custom);
+      }
 
       ret.endModal = (async function (result?: any, onDone?: () => void) {
         const ret = $refs.props.visible && (await $refs.props.visible.resolve.call(this, result));
@@ -360,8 +400,122 @@ function mergeModalType(map: ModalTypeMap) {
   return Object.assign(modalTypeMap, map);
 }
 
+
+function createRefComponent<
+  T extends React.ForwardRefExoticComponent<React.RefAttributes<
+    Record<string, any>
+    & any
+  >>,
+  P extends T extends React.ForwardRefExoticComponent<React.RefAttributes<infer P & any>>
+  ? P
+  : never,
+  R extends T extends React.ForwardRefExoticComponent<React.RefAttributes<P & infer R>>
+  ? R
+  : never,
+>(
+  RefComponent: T,
+  props?: P | null,
+  options: {
+    id?: string,
+    selector?: string,
+    container?: HTMLElement|null,
+    className?: string,
+    onAppendContainer?: (container: HTMLElement) => void|boolean,
+    onRemoveContainer?: (container: HTMLElement) => void|boolean,
+    destoryDelay?: number
+  } = {},
+): Promise<[ref: R,  destory: () => void]> {
+  let { selector, container, id, onAppendContainer, onRemoveContainer, className, destoryDelay = 0 } = options;
+  return new Promise((resolve, reject) => {
+    let resolved = false;
+    let needDestory = false;
+    if (!container) {
+      if (selector) {
+        container = document.querySelector(selector) as HTMLElement;
+      } else if (id) {
+        container = document.getElementById(id) as HTMLElement;
+      }
+      if (!container) {
+        container = document.createElement('div');
+        if (className) {
+          container.classList.add(className);
+        }
+        if (id) {
+          container.id = id;
+        }
+        if (onAppendContainer?.(container) !== true) {
+          document.body.appendChild(container);
+        }
+        needDestory = true;
+      }
+    }
+
+    const destory = () => {
+      setTimeout(() => {
+        ReactDOM.unmountComponentAtNode(container as any);
+        ReactDOM.render(null as any, container as any);
+        if (needDestory && container?.parentNode) {
+          if (onRemoveContainer?.(container) !== true) {
+            container.parentNode.removeChild(container);
+          }
+          container = null;
+        }
+      }, destoryDelay);
+    };
+
+    ReactDOM.render(
+      React.createElement(RefComponent, {
+        ...(props as any || {}),
+        ref: r => {
+          if (r && !resolved) {
+            resolved = true;
+            resolve([r, destory]);
+          }
+        }
+      }),
+      container,
+    );
+  });
+}
+
+
+function showRefModal<
+  M extends ModalRef<any, any>,
+  D extends M extends ModalRef<any, infer D>
+    ? D extends Record<string, any>
+      ? D
+      : Record<string, any>
+    : Record<string, any>,
+  U extends M extends ModalRef<any, any, infer U>
+    ? U extends never
+      ? any
+      : U
+    : Record<string, any>
+>(
+  RefModal: React.ForwardRefExoticComponent<
+    React.RefAttributes<M>
+  >,
+  modalData?: D,
+  options: Parameters<typeof createRefComponent>[2] = {},
+): Promise<U> {
+  return new Promise<U>((resolve, reject) => {
+    createRefComponent(RefModal, undefined, options)
+      .then(([ref, destory]) => {
+        ref.modal(modalData || {}).then(result => {
+          destory();
+          resolve(result);
+        }).catch(error => {
+          destory();
+          reject(error);
+        });
+      }).catch(reject);
+  });
+}
+
 export {
-  mergeModalType
+  mergeModalType,
+  showRefModal,
+  createRefComponent,
 };
 
 

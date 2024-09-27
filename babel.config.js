@@ -6,7 +6,7 @@ const config = {
         modules: false,
         useBuiltIns: 'usage',
         corejs: 2,
-        targets: { browsers: ['Chrome >= 31'] }
+        targets: { browsers: ['Chrome >= 49'] }
       }
     ],
     '@babel/typescript',

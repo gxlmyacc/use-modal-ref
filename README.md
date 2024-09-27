@@ -97,7 +97,7 @@ export default Test;
 
 
 ### used with `Drawer`:
-```js
+```jsx
 // test drawer
 import React, { useState } from 'react';
 import { Drawer, Button, Input } from 'antd';
@@ -156,7 +156,7 @@ const TestDrawer = React.forwardRef((props = {}, ref) => {
 
 export default TestDrawer;
 ```
-```js
+```jsx
 // test
 import React, { useState } from 'react';
 import { Button } from 'antd';
@@ -177,7 +177,64 @@ function Test(props) {
   return (
     <div>
       <Button onClick={showTestDrawer}>show drawer</Button>
-      <TestDrawer ref={r => r && ($refs.testDrawer = r)} />
+      <TestDrawer ref={r => $refs.testDrawer = r} />
+    </div>
+  );
+}
+
+export default Test;
+```
+
+### used with `showRefModal`:
+```jsx
+// test
+import React from 'react';
+import { Button } from 'antd';
+import TestModal from './TestModal';
+import { showRefModal } from 'use-modal-ref';
+
+function Test(props) {
+  const showTestModal = async () => {
+    const inputValue = await showRefModal(TestModal, {
+      label: 'please input value:'
+    });
+    alert('input value is: ' + inputValue);
+  }
+
+  return (
+    <div>
+      <Button onClick={showTestModal}>show modal</Button>
+    </div>
+  );
+}
+
+export default Test;
+```
+
+### used with `createRefComponent`:
+```jsx
+// test
+import React from 'react';
+import { Button } from 'antd';
+import TestModal from './TestModal';
+import { createRefComponent } from 'use-modal-ref';
+
+function Test(props) {
+  const showTestModal = async () => {
+    const [ref, destory] = await createRefComponent(TestModal);
+    try {
+      const inputValue = await ref.modal(TestModal, {
+          label: 'please input value:'
+        });
+      alert('input value is: ' + inputValue);
+    } finally {
+      destory();
+    }
+  }
+
+  return (
+    <div>
+      <Button onClick={showTestModal}>show modal</Button>
     </div>
   );
 }
