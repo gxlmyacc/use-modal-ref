@@ -52,10 +52,13 @@ export type ModalAction = 'end'|'cancel';
 
 export type ModalType = 'modal'|'drawer'|'popover';
 
-export type ModalTypeMap = Record<string, {
-  visible: string,
-  onClose: string,
-}>;
+export type ModalTypeMap = {
+  // eslint-disable-next-line no-unused-vars
+  [key in ModalType]: {
+    visible: string,
+    onClose: string,
+  }
+};
 
 const modalTypeMap: ModalTypeMap = {
   modal: {
@@ -87,8 +90,8 @@ export type ModalPropsTypeMap = {
   },
 };
 export type ModalRef<
-  P extends ModalType,
-  T extends Record<string, any>,
+  P extends ModalType = 'modal',
+  T extends Record<string, any> = Record<string, any>,
   U = any,
   C extends Record<string, any> = Record<string, any>
 > = {
@@ -396,10 +399,11 @@ function useCommonRef<
   };
 }
 
-function mergeModalType(map: ModalTypeMap) {
+function mergeModalType(map: Partial<ModalTypeMap>) {
   return Object.assign(modalTypeMap, map);
 }
 
+let refContainerSeed = 0;
 
 function createRefComponent<
   T extends React.ForwardRefExoticComponent<React.RefAttributes<
@@ -418,17 +422,24 @@ function createRefComponent<
   options: {
     id?: string,
     selector?: string,
-    container?: HTMLElement|null,
+    container?: HTMLElement|null|(() => HTMLElement),
     className?: string,
+    onRef?: (ref: any) => void,
     onAppendContainer?: (container: HTMLElement) => void|boolean,
     onRemoveContainer?: (container: HTMLElement) => void|boolean,
+    onDestoryComponent?: (container: HTMLElement) => void|boolean,
     destoryDelay?: number
   } = {},
 ): Promise<[ref: R,  destory: () => void]> {
-  let { selector, container, id, onAppendContainer, onRemoveContainer, className, destoryDelay = 0 } = options;
+  let {
+    selector, container: _container, id,  className, destoryDelay = 50,
+    onDestoryComponent, onAppendContainer, onRemoveContainer, onRef,
+  } = options;
   return new Promise((resolve, reject) => {
     let resolved = false;
     let needDestory = false;
+    let container = isFunction(_container) ? _container() : _container;
+
     if (!container) {
       if (selector) {
         container = document.querySelector(selector) as HTMLElement;
@@ -437,6 +448,7 @@ function createRefComponent<
       }
       if (!container) {
         container = document.createElement('div');
+        container.classList.add(`ref-component-container-${++refContainerSeed}`);
         if (className) {
           container.classList.add(className);
         }
@@ -452,8 +464,10 @@ function createRefComponent<
 
     const destory = () => {
       setTimeout(() => {
-        ReactDOM.unmountComponentAtNode(container as any);
-        ReactDOM.render(null as any, container as any);
+        if (onDestoryComponent?.(container as any) !== true) {
+          ReactDOM.unmountComponentAtNode(container as any);
+          ReactDOM.render(null as any, container as any);
+        }
         if (needDestory && container?.parentNode) {
           if (onRemoveContainer?.(container) !== true) {
             container.parentNode.removeChild(container);
@@ -470,6 +484,7 @@ function createRefComponent<
           if (r && !resolved) {
             resolved = true;
             resolve([r, destory]);
+            if (onRef) onRef(r);
           }
         }
       }),
@@ -496,10 +511,12 @@ function showRefModal<
     React.RefAttributes<M>
   >,
   modalData?: D,
-  options: Parameters<typeof createRefComponent>[2] = {},
+  options: Parameters<typeof createRefComponent>[2] & {
+    props?: Record<string, any>
+  } = {},
 ): Promise<U> {
   return new Promise<U>((resolve, reject) => {
-    createRefComponent(RefModal, undefined, options)
+    createRefComponent(RefModal, options.props, options)
       .then(([ref, destory]) => {
         ref.modal(modalData || {}).then(result => {
           destory();

@@ -1,6 +1,6 @@
 import useCommonRef, { ModalRefOption } from './common';
 
-function useModalRef<T, U = any>(
+function useModalRef<T extends Record<string, any>, U = any>(
   ref: React.Ref<any>,
   defaultData: Partial<T>|(() => Partial<T>) = {},
   options: ModalRefOption<'modal', T, U> = {},

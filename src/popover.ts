@@ -1,6 +1,6 @@
 import useCommonRef, { ModalRefOption } from './common';
 
-function usePopoverRef<T, U = any>(
+function usePopoverRef<T extends Record<string, any>, U = any>(
   ref: React.Ref<any>,
   defaultData: Partial<T>|(() => Partial<T>) = {},
   options: ModalRefOption<'popover', T, U> = {},
