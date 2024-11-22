@@ -86,7 +86,7 @@ declare function createRefComponent<T extends React.ForwardRefExoticComponent<Re
     selector?: string;
     container?: HTMLElement | null | (() => HTMLElement);
     className?: string;
-    onRef?: (ref: any) => void;
+    onRef?: (ref: any, destory: () => void) => void;
     onAppendContainer?: (container: HTMLElement) => void | boolean;
     onRemoveContainer?: (container: HTMLElement) => void | boolean;
     onDestoryComponent?: (container: HTMLElement) => void | boolean;

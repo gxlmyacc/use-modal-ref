@@ -332,9 +332,9 @@ function useCommonRef<
             setTimeout(() => {
               const { init: _init, afterModal, modalOptions } = this;
               if (this.visible) {
-                _init && _init.call(this, newData, modalOptions);
-                afterModal && afterModal.call(this, newData, modalOptions);
-                modalOptions.afterModal && afterModal.call(this, newData, modalOptions);
+                _init && _init.call(this, newModalData, modalOptions);
+                afterModal && afterModal.call(this, newModalData, modalOptions);
+                modalOptions.afterModal && afterModal.call(this, newModalData, modalOptions);
               }
             });
           });
@@ -424,19 +424,20 @@ function createRefComponent<
     selector?: string,
     container?: HTMLElement|null|(() => HTMLElement),
     className?: string,
-    onRef?: (ref: any) => void,
+    onRef?: (ref: any, destory: () => void) => void,
     onAppendContainer?: (container: HTMLElement) => void|boolean,
     onRemoveContainer?: (container: HTMLElement) => void|boolean,
     onDestoryComponent?: (container: HTMLElement) => void|boolean,
-    destoryDelay?: number
+    destoryDelay?: number,
   } = {},
 ): Promise<[ref: R,  destory: () => void]> {
   let {
-    selector, container: _container, id,  className, destoryDelay = 50,
+    selector, container: _container, id, className, destoryDelay = 50,
     onDestoryComponent, onAppendContainer, onRemoveContainer, onRef,
   } = options;
   return new Promise((resolve, reject) => {
     let resolved = false;
+    let destoryed = false;
     let needDestory = false;
     let container = isFunction(_container) ? _container() : _container;
 
@@ -463,6 +464,10 @@ function createRefComponent<
     }
 
     const destory = () => {
+      if (destoryed) {
+        return;
+      }
+      destoryed = true;
       setTimeout(() => {
         if (onDestoryComponent?.(container as any) !== true) {
           ReactDOM.unmountComponentAtNode(container as any);
@@ -484,7 +489,7 @@ function createRefComponent<
           if (r && !resolved) {
             resolved = true;
             resolve([r, destory]);
-            if (onRef) onRef(r);
+            if (onRef) onRef(r, destory);
           }
         }
       }),
