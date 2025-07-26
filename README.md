@@ -10,7 +10,7 @@
 
 **🚀 Powerful React hooks for elegant modal/drawer management**
 
-[English](./README.md) | [中文](./README_CN.md)
+[English](https://github.com/gxlmyacc/use-modal-ref/blob/master/README.md) | [中文](https://github.com/gxlmyacc/use-modal-ref/blob/master/README_CN.md)
 
 </div>
 
