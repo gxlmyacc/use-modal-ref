@@ -42,7 +42,7 @@ pnpm add use-modal-ref
 ### 基础模态框使用
 
 ```jsx
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Modal, Button, Input } from 'antd';
 import useModalRef from 'use-modal-ref';
 
@@ -79,10 +79,10 @@ const TestModal = React.forwardRef((props, ref) => {
 
 // 使用组件
 function App() {
-  const [modalRef, setModalRef] = useState(null);
+  const [modalRef, setModalRef] = useRef(null);
 
   const showModal = async () => {
-    const result = await modalRef.modal({
+    const result = await modalRef.current.modal({
       title: '自定义标题',
       label: '请输入一个值：'
     });
