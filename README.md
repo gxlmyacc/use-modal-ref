@@ -42,7 +42,7 @@ pnpm add use-modal-ref
 ### Basic Modal Usage
 
 ```jsx
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Modal, Button, Input } from 'antd';
 import useModalRef from 'use-modal-ref';
 
@@ -110,7 +110,7 @@ function App() {
 <summary>Click to expand</summary>
 
 ```jsx
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Modal, Button, Input, Form } from 'antd';
 import useModalRef from 'use-modal-ref';
 
@@ -186,10 +186,10 @@ const UserModal = React.forwardRef((props, ref) => {
 
 // Usage
 function UserManagement() {
-  const [userModalRef, setUserModalRef] = useState(null);
+  const [userModalRef, setUserModalRef] = useRef(null);
 
   const addUser = async () => {
-    const userData = await userModalRef.modal({
+    const userData = await userModalRef.current.modal({
       title: 'Add New User'
     });
     
@@ -219,7 +219,7 @@ function UserManagement() {
 <summary>Click to expand</summary>
 
 ```jsx
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Drawer, Button, Input, Space } from 'antd';
 import { useDrawerRef } from 'use-modal-ref';
 
@@ -274,10 +274,10 @@ const SettingsDrawer = React.forwardRef((props, ref) => {
 
 // Usage
 function SettingsPage() {
-  const [settingsRef, setSettingsRef] = useState(null);
+  const [settingsRef, setSettingsRef] = useRef(null);
 
   const openSettings = async () => {
-    const newSettings = await settingsRef.modal({
+    const newSettings = await settingsRef.current.modal({
       title: 'Edit Settings',
       initialSettings: { setting1: 'value1', setting2: 'value2' }
     });
@@ -368,10 +368,10 @@ const ColorPickerPopover = React.forwardRef((props, ref) => {
 
 // Usage
 function ColorPicker() {
-  const [colorRef, setColorRef] = useState(null);
+  const [colorRef, setColorRef] = useRef(null);
 
   const pickColor = async () => {
-    const color = await colorRef.modal({
+    const color = await colorRef.current.modal({
       title: 'Select Color',
       colors: ['#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1']
     });

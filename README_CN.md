@@ -110,7 +110,7 @@ function App() {
 <summary>点击展开</summary>
 
 ```jsx
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Modal, Button, Input, Form } from 'antd';
 import useModalRef from 'use-modal-ref';
 
@@ -186,10 +186,10 @@ const UserModal = React.forwardRef((props, ref) => {
 
 // 使用示例
 function UserManagement() {
-  const [userModalRef, setUserModalRef] = useState(null);
+  const [userModalRef, setUserModalRef] = useRef(null);
 
   const addUser = async () => {
-    const userData = await userModalRef.modal({
+    const userData = await userModalRef.current.modal({
       title: '添加新用户'
     });
     
@@ -323,7 +323,7 @@ export default usePopoverRef;
 
 ```jsx
 // ColorPickerPopover.jsx
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Popover, Button, Space } from 'antd';
 import usePopoverRef from './usePopoverRef';
 
@@ -368,10 +368,10 @@ const ColorPickerPopover = React.forwardRef((props, ref) => {
 
 // 使用示例
 function ColorPicker() {
-  const [colorRef, setColorRef] = useState(null);
+  const [colorRef, setColorRef] = useRef(null);
 
   const pickColor = async () => {
-    const color = await colorRef.modal({
+    const color = await colorRef.current.modal({
       title: '选择颜色',
       colors: ['#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1']
     });
