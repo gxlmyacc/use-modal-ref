@@ -485,6 +485,18 @@ function useModalRef<T = any, U = any>(
 }
 ```
 
+**参数说明：**
+
+- `ref: React.Ref<any>` - React ref 对象，用于控制模态框的显示和隐藏
+- `defaultData?: Partial<T> | (() => Partial<T>)` - 默认数据，可以是对象或返回对象的函数
+- `options?: ModalRefOption<'modal', T, U>` - 配置选项，包含生命周期钩子等
+- `deps?: React.DependencyList` - 依赖数组，当依赖变化时重新初始化
+
+**返回值：**
+
+- `modal: ModalRefMethods<U>` - 模态框控制方法对象
+- `data: T` - 当前模态框数据
+
 ### useDrawerRef
 
 ```typescript
@@ -498,6 +510,18 @@ function useDrawerRef<T = any, U = any>(
   data: T;
 }
 ```
+
+**参数说明：**
+
+- `ref: React.Ref<any>` - React ref 对象，用于控制抽屉的显示和隐藏
+- `defaultData?: Partial<T> | (() => Partial<T>)` - 默认数据，可以是对象或返回对象的函数
+- `options?: ModalRefOption<'drawer', T, U>` - 配置选项，包含生命周期钩子等
+- `deps?: React.DependencyList` - 依赖数组，当依赖变化时重新初始化
+
+**返回值：**
+
+- `modal: ModalRefMethods<U>` - 抽屉控制方法对象
+- `data: T` - 当前抽屉数据
 
 ### useCommonRef
 
@@ -514,6 +538,19 @@ function useCommonRef<P = string, T = any, U = any>(
 }
 ```
 
+**参数说明：**
+
+- `modalType: P` - 模态框类型标识符（如 'modal', 'drawer', 'popover' 等）
+- `ref: React.Ref<any>` - React ref 对象，用于控制组件的显示和隐藏
+- `defaultData?: Partial<T> | (() => Partial<T>)` - 默认数据，可以是对象或返回对象的函数
+- `options?: ModalRefOption<P, T, U>` - 配置选项，包含生命周期钩子等
+- `deps?: React.DependencyList` - 依赖数组，当依赖变化时重新初始化
+
+**返回值：**
+
+- `modal: ModalRefMethods<U>` - 组件控制方法对象
+- `data: T` - 当前组件数据
+
 ### showRefModal
 
 ```typescript
@@ -523,6 +560,15 @@ function showRefModal<T = any, U = any>(
 ): Promise<U | undefined>
 ```
 
+**参数说明：**
+
+- `Component: React.ComponentType<any>` - 要显示的模态框组件
+- `data?: T` - 传递给模态框的数据
+
+**返回值：**
+
+- `Promise<U | undefined>` - 返回模态框的结果，如果用户取消则返回 undefined
+
 ### createRefComponent
 
 ```typescript
@@ -530,6 +576,14 @@ function createRefComponent<T = any>(
   Component: React.ComponentType<any>
 ): Promise<[React.RefObject<T>, () => void]>
 ```
+
+**参数说明：**
+
+- `Component: React.ComponentType<any>` - 要创建的组件
+
+**返回值：**
+
+- `Promise<[React.RefObject<T>, () => void]>` - 返回一个元组，包含组件的 ref 对象和销毁函数
 
 ## 🎯 高级特性
 

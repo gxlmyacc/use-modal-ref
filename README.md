@@ -485,6 +485,18 @@ function useModalRef<T = any, U = any>(
 }
 ```
 
+**Parameters:**
+
+- `ref: React.Ref<any>` - React ref object for controlling modal show/hide
+- `defaultData?: Partial<T> | (() => Partial<T>)` - Default data, can be an object or a function returning an object
+- `options?: ModalRefOption<'modal', T, U>` - Configuration options including lifecycle hooks
+- `deps?: React.DependencyList` - Dependency array, reinitializes when dependencies change
+
+**Returns:**
+
+- `modal: ModalRefMethods<U>` - Modal control methods object
+- `data: T` - Current modal data
+
 ### useDrawerRef
 
 ```typescript
@@ -498,6 +510,18 @@ function useDrawerRef<T = any, U = any>(
   data: T;
 }
 ```
+
+**Parameters:**
+
+- `ref: React.Ref<any>` - React ref object for controlling drawer show/hide
+- `defaultData?: Partial<T> | (() => Partial<T>)` - Default data, can be an object or a function returning an object
+- `options?: ModalRefOption<'drawer', T, U>` - Configuration options including lifecycle hooks
+- `deps?: React.DependencyList` - Dependency array, reinitializes when dependencies change
+
+**Returns:**
+
+- `modal: ModalRefMethods<U>` - Drawer control methods object
+- `data: T` - Current drawer data
 
 ### useCommonRef
 
@@ -514,6 +538,19 @@ function useCommonRef<P = string, T = any, U = any>(
 }
 ```
 
+**Parameters:**
+
+- `modalType: P` - Modal type identifier (e.g., 'modal', 'drawer', 'popover', etc.)
+- `ref: React.Ref<any>` - React ref object for controlling component show/hide
+- `defaultData?: Partial<T> | (() => Partial<T>)` - Default data, can be an object or a function returning an object
+- `options?: ModalRefOption<P, T, U>` - Configuration options including lifecycle hooks
+- `deps?: React.DependencyList` - Dependency array, reinitializes when dependencies change
+
+**Returns:**
+
+- `modal: ModalRefMethods<U>` - Component control methods object
+- `data: T` - Current component data
+
 ### showRefModal
 
 ```typescript
@@ -523,6 +560,15 @@ function showRefModal<T = any, U = any>(
 ): Promise<U | undefined>
 ```
 
+**Parameters:**
+
+- `Component: React.ComponentType<any>` - Modal component to display
+- `data?: T` - Data to pass to the modal
+
+**Returns:**
+
+- `Promise<U | undefined>` - Returns modal result, undefined if user cancels
+
 ### createRefComponent
 
 ```typescript
@@ -530,6 +576,14 @@ function createRefComponent<T = any>(
   Component: React.ComponentType<any>
 ): Promise<[React.RefObject<T>, () => void]>
 ```
+
+**Parameters:**
+
+- `Component: React.ComponentType<any>` - Component to create
+
+**Returns:**
+
+- `Promise<[React.RefObject<T>, () => void]>` - Returns a tuple containing the component's ref object and destroy function
 
 ## 🎯 Advanced Features
 
