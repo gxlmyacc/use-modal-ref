@@ -13,5 +13,6 @@ es
 .history/
 drawer/esm
 drawer/es
+/types
 dist
 

@@ -52,12 +52,14 @@ export type ModalAction = 'end'|'cancel';
 
 export type ModalType = 'modal'|'drawer'|'popover';
 
+export type ModalTypeItem = {
+  visible: string,
+  onClose: string,
+};
+
 export type ModalTypeMap = {
   // eslint-disable-next-line no-unused-vars
-  [key in ModalType]: {
-    visible: string,
-    onClose: string,
-  }
+  [key in ModalType]: ModalTypeItem
 };
 
 const modalTypeMap: ModalTypeMap = {
@@ -139,7 +141,7 @@ function useCommonRef<
   C extends Record<string, any> = Record<string, any>
 >(
   modalType: P,
-  ref: React.Ref<any>,
+  ref: React.ForwardedRef<ModalRef<P, T, U, C>>,
   defaultData: Partial<T>|(() => Partial<T>) = {},
   options: ModalRefOption<P, T, U, C> = {},
   deps: React.DependencyList = []
@@ -207,7 +209,16 @@ function useCommonRef<
             $refs.props.modalOptions = options || {};
 
             const defaultData = (resolveDefaultData($refs.defaultData) || {});
-            let newModalData: T = { ...defaultData, ...newData };
+            let newModalData: T = { ...defaultData };
+            if (newData) {
+              Object.keys(newData).forEach(key => {
+                const value = newData[key];
+                if (value === undefined) {
+                  return;
+                }
+                (newModalData as any)[key] = value;
+              });
+            }
 
             if (this.beforeModal) {
               let pauseResult: any;
@@ -227,8 +238,8 @@ function useCommonRef<
               if (pause) {
                 const checkIsError = (v: any) => {
                   if (v === 'cancel'
-                || v instanceof Error
-                || isError) {
+                    || v instanceof Error
+                    || isError) {
                     return true;
                   }
                   if (v && v.head) {
@@ -424,21 +435,21 @@ function createRefComponent<
     selector?: string,
     container?: HTMLElement|null|(() => HTMLElement),
     className?: string,
-    onRef?: (ref: any, destory: () => void) => void,
+    onRef?: (ref: any, destroy: () => void) => void,
     onAppendContainer?: (container: HTMLElement) => void|boolean,
     onRemoveContainer?: (container: HTMLElement) => void|boolean,
-    onDestoryComponent?: (container: HTMLElement) => void|boolean,
-    destoryDelay?: number,
+    onDestroyComponent?: (container: HTMLElement) => void|boolean,
+    destroyDelay?: number,
   } = {},
-): Promise<[ref: R,  destory: () => void]> {
+): Promise<[ref: R,  destroy: () => void]> {
   let {
-    selector, container: _container, id, className, destoryDelay = 50,
-    onDestoryComponent, onAppendContainer, onRemoveContainer, onRef,
+    selector, container: _container, id, className, destroyDelay = 50,
+    onDestroyComponent, onAppendContainer, onRemoveContainer, onRef,
   } = options;
   return new Promise((resolve, reject) => {
     let resolved = false;
-    let destoryed = false;
-    let needDestory = false;
+    let destroyed = false;
+    let needDestroy = false;
     let container = isFunction(_container) ? _container() : _container;
 
     if (!container) {
@@ -459,27 +470,27 @@ function createRefComponent<
         if (onAppendContainer?.(container) !== true) {
           document.body.appendChild(container);
         }
-        needDestory = true;
+        needDestroy = true;
       }
     }
 
-    const destory = () => {
-      if (destoryed) {
+    const destroy = () => {
+      if (destroyed) {
         return;
       }
-      destoryed = true;
+      destroyed = true;
       setTimeout(() => {
-        if (onDestoryComponent?.(container as any) !== true) {
+        if (onDestroyComponent?.(container as any) !== true) {
           ReactDOM.unmountComponentAtNode(container as any);
           ReactDOM.render(null as any, container as any);
         }
-        if (needDestory && container?.parentNode) {
+        if (needDestroy && container?.parentNode) {
           if (onRemoveContainer?.(container) !== true) {
             container.parentNode.removeChild(container);
           }
           container = null;
         }
-      }, destoryDelay);
+      }, destroyDelay);
     };
 
     ReactDOM.render(
@@ -488,8 +499,8 @@ function createRefComponent<
         ref: r => {
           if (r && !resolved) {
             resolved = true;
-            resolve([r, destory]);
-            if (onRef) onRef(r, destory);
+            resolve([r, destroy]);
+            if (onRef) onRef(r, destroy);
           }
         }
       }),
@@ -517,17 +528,20 @@ function showRefModal<
   >,
   modalData?: D,
   options: Parameters<typeof createRefComponent>[2] & {
-    props?: Record<string, any>
+    props?: Record<string, any>,
+    modalMethod?: string,
+    closeWhenUrlChange?: boolean
   } = {},
 ): Promise<U> {
   return new Promise<U>((resolve, reject) => {
+    const modalMethod = options.modalMethod || 'modal';
     createRefComponent(RefModal, options.props, options)
-      .then(([ref, destory]) => {
-        ref.modal(modalData || {}).then(result => {
-          destory();
+      .then(([ref, destroy]) => {
+        (ref[modalMethod] as any)(modalData || {}).then((result: any) => {
+          destroy();
           resolve(result);
-        }).catch(error => {
-          destory();
+        }).catch((error: any) => {
+          destroy();
           reject(error);
         });
       }).catch(reject);
