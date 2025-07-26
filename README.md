@@ -79,10 +79,10 @@ const TestModal = React.forwardRef((props, ref) => {
 
 // Usage Component
 function App() {
-  const [modalRef, setModalRef] = useState(null);
+  const [modalRef, setModalRef] = useRef(null);
 
   const showModal = async () => {
-    const result = await modalRef.modal({
+    const result = await modalRef.current.modal({
       title: 'Custom Title',
       label: 'Please enter a value:'
     });
