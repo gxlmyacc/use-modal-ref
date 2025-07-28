@@ -41,7 +41,7 @@ pnpm add use-modal-ref
 
 ### 基础模态框使用
 
-```jsx
+``jsx
 import React, { useState, useRef } from 'react';
 import { Modal, Button, Input } from 'antd';
 import useModalRef from 'use-modal-ref';
@@ -79,7 +79,7 @@ const TestModal = React.forwardRef((props, ref) => {
 
 // 使用组件
 function App() {
-  const [modalRef, setModalRef] = useRef(null);
+  const modalRef = useRef(null);
 
   const showModal = async () => {
     const result = await modalRef.current.modal({
@@ -97,7 +97,7 @@ function App() {
       <Button type="primary" onClick={showModal}>
         显示模态框
       </Button>
-      <TestModal ref={setModalRef} />
+      <TestModal ref={modalRef} />
     </div>
   );
 }
@@ -186,7 +186,7 @@ const UserModal = React.forwardRef((props, ref) => {
 
 // 使用示例
 function UserManagement() {
-  const [userModalRef, setUserModalRef] = useRef(null);
+  const userModalRef = useRef(null);
 
   const addUser = async () => {
     const userData = await userModalRef.current.modal({
@@ -204,7 +204,7 @@ function UserManagement() {
       <Button type="primary" onClick={addUser}>
         添加用户
       </Button>
-      <UserModal ref={setUserModalRef} />
+      <UserModal ref={userModalRef} />
     </div>
   );
 }
@@ -218,7 +218,7 @@ function UserManagement() {
 <details>
 <summary>点击展开</summary>
 
-```jsx
+``jsx
 import React, { useState } from 'react';
 import { Drawer, Button, Input, Space } from 'antd';
 import { useDrawerRef } from 'use-modal-ref';
@@ -274,12 +274,12 @@ const SettingsDrawer = React.forwardRef((props, ref) => {
 
 // 使用示例
 function SettingsPage() {
-  const [settingsRef, setSettingsRef] = useState(null);
+  const settingsRef = useRef(null);
 
   const openSettings = async () => {
-    const newSettings = await settingsRef.modal({
+    const newSettings = await settingsRef.current.modal({
       title: '编辑设置',
-      initialSettings: { setting1: '值1', setting2: '值2' }
+      initialSettings: { setting1: '값1', setting2: '값2' }
     });
     
     if (newSettings) {
@@ -290,7 +290,7 @@ function SettingsPage() {
   return (
     <div>
       <Button onClick={openSettings}>打开设置</Button>
-      <SettingsDrawer ref={setSettingsRef} />
+      <SettingsDrawer ref={settingsRef} />
     </div>
   );
 }
@@ -303,7 +303,7 @@ function SettingsPage() {
 <details>
 <summary>点击展开</summary>
 
-```jsx
+``jsx
 // usePopoverRef.js
 import { useCommonRef, mergeModalType } from 'use-modal-ref';
 
@@ -368,7 +368,7 @@ const ColorPickerPopover = React.forwardRef((props, ref) => {
 
 // 使用示例
 function ColorPicker() {
-  const [colorRef, setColorRef] = useRef(null);
+  const colorRef = useRef(null);
 
   const pickColor = async () => {
     const color = await colorRef.current.modal({
@@ -383,7 +383,7 @@ function ColorPicker() {
 
   return (
     <div>
-      <ColorPickerPopover ref={setColorRef}>
+      <ColorPickerPopover ref={colorRef}>
         <Button onClick={pickColor}>选择颜色</Button>
       </ColorPickerPopover>
     </div>
@@ -398,7 +398,7 @@ function ColorPicker() {
 <details>
 <summary>点击展开</summary>
 
-```jsx
+``jsx
 import React from 'react';
 import { Button } from 'antd';
 import TestModal from './TestModal';
@@ -433,7 +433,7 @@ function App() {
 <details>
 <summary>点击展开</summary>
 
-```jsx
+``jsx
 import React from 'react';
 import { Button } from 'antd';
 import TestModal from './TestModal';
@@ -585,13 +585,90 @@ function createRefComponent<T = any>(
 
 - `Promise<[React.RefObject<T>, () => void]>` - 返回一个元组，包含组件的 ref 对象和销毁函数
 
+## 📘 TypeScript 支持
+
+本库使用 TypeScript 编写，并提供完整的类型定义。
+
+### 类型安全
+
+``tsx
+interface ModalData {
+  title: string;
+  label: string;
+}
+
+interface ModalResult {
+  value: string;
+}
+
+const TestModal = React.forwardRef((props, ref) => {
+  const { modal, data } = useModalRef<ModalData, ModalResult>(ref, {
+    title: '默认标题',
+    label: '默认标签'
+  });
+  
+  // TypeScript 将确保 data 符合 ModalData 类型
+  // 并且 modal 回调函数返回 ModalResult 类型
+});
+```
+
+### 严格模式支持
+
+本库完全支持 React 的严格模式和并发特性。
+
+## ⚠️ 错误处理
+
+在模态框交互中处理潜在的错误：
+
+```jsx
+const showModal = async () => {
+  try {
+    const result = await modalRef.current.modal(data);
+    if (result !== undefined) {
+      // 处理成功情况
+      console.log('模态框结果:', result);
+    } else {
+      // 处理取消/关闭情况
+      console.log('模态框被取消了');
+    }
+  } catch (error) {
+    // 处理模态框操作期间的错误
+    console.error('模态框错误:', error);
+  }
+};
+```
+
+## ⚡ 性能优化
+
+### 依赖数组的使用
+
+使用依赖数组来优化重渲染：
+
+``jsx
+const { modal, data } = useModalRef(ref, defaultData, options, [dep1, dep2]);
+```
+
+### 懒初始化
+
+对于复杂的初始化操作，可以使用函数形式的 defaultData：
+
+``jsx
+const { modal, data } = useModalRef(ref, () => {
+  // 昂贵的计算只在需要时运行
+  return {
+    title: getLocalizedTitle(),
+    items: generateInitialItems()
+  };
+});
+```
+
 ## 🎯 高级特性
 
 ### 自定义模态框类型
 
 您可以为任何组件创建自定义模态框类型：
 
-```jsx
+``jsx
 import { useCommonRef, mergeModalType } from 'use-modal-ref';
 
 // 注册自定义模态框类型
@@ -609,7 +686,7 @@ const useTooltipRef = (ref, defaultData, options, deps = []) =>
 
 ### 前置/后置钩子
 
-```jsx
+``jsx
 const { modal, data } = useModalRef(ref, defaultData, {
   beforeModal: async (data) => {
     // 模态框打开前调用

@@ -41,7 +41,7 @@ pnpm add use-modal-ref
 
 ### Basic Modal Usage
 
-```jsx
+``jsx
 import React, { useState, useRef } from 'react';
 import { Modal, Button, Input } from 'antd';
 import useModalRef from 'use-modal-ref';
@@ -79,7 +79,7 @@ const TestModal = React.forwardRef((props, ref) => {
 
 // Usage Component
 function App() {
-  const [modalRef, setModalRef] = useRef(null);
+  const modalRef = useRef(null);
 
   const showModal = async () => {
     const result = await modalRef.current.modal({
@@ -97,7 +97,7 @@ function App() {
       <Button type="primary" onClick={showModal}>
         Show Modal
       </Button>
-      <TestModal ref={setModalRef} />
+      <TestModal ref={modalRef} />
     </div>
   );
 }
@@ -186,7 +186,7 @@ const UserModal = React.forwardRef((props, ref) => {
 
 // Usage
 function UserManagement() {
-  const [userModalRef, setUserModalRef] = useRef(null);
+  const userModalRef = useRef(null);
 
   const addUser = async () => {
     const userData = await userModalRef.current.modal({
@@ -204,7 +204,7 @@ function UserManagement() {
       <Button type="primary" onClick={addUser}>
         Add User
       </Button>
-      <UserModal ref={setUserModalRef} />
+      <UserModal ref={userModalRef} />
     </div>
   );
 }
@@ -274,7 +274,7 @@ const SettingsDrawer = React.forwardRef((props, ref) => {
 
 // Usage
 function SettingsPage() {
-  const [settingsRef, setSettingsRef] = useRef(null);
+  const settingsRef = useRef(null);
 
   const openSettings = async () => {
     const newSettings = await settingsRef.current.modal({
@@ -290,7 +290,7 @@ function SettingsPage() {
   return (
     <div>
       <Button onClick={openSettings}>Open Settings</Button>
-      <SettingsDrawer ref={setSettingsRef} />
+      <SettingsDrawer ref={settingsRef} />
     </div>
   );
 }
@@ -303,7 +303,7 @@ function SettingsPage() {
 <details>
 <summary>Click to expand</summary>
 
-```jsx
+``jsx
 // usePopoverRef.js
 import { useCommonRef, mergeModalType } from 'use-modal-ref';
 
@@ -368,7 +368,7 @@ const ColorPickerPopover = React.forwardRef((props, ref) => {
 
 // Usage
 function ColorPicker() {
-  const [colorRef, setColorRef] = useRef(null);
+  const colorRef = useRef(null);
 
   const pickColor = async () => {
     const color = await colorRef.current.modal({
@@ -383,7 +383,7 @@ function ColorPicker() {
 
   return (
     <div>
-      <ColorPickerPopover ref={setColorRef}>
+      <ColorPickerPopover ref={colorRef}>
         <Button onClick={pickColor}>Pick Color</Button>
       </ColorPickerPopover>
     </div>
@@ -398,7 +398,7 @@ function ColorPicker() {
 <details>
 <summary>Click to expand</summary>
 
-```jsx
+``jsx
 import React from 'react';
 import { Button } from 'antd';
 import TestModal from './TestModal';
@@ -433,7 +433,7 @@ function App() {
 <details>
 <summary>Click to expand</summary>
 
-```jsx
+``jsx
 import React from 'react';
 import { Button } from 'antd';
 import TestModal from './TestModal';
@@ -585,13 +585,90 @@ function createRefComponent<T = any>(
 
 - `Promise<[React.RefObject<T>, () => void]>` - Returns a tuple containing the component's ref object and destroy function
 
+## 📘 TypeScript Support
+
+This library is written in TypeScript and provides full type definitions out of the box.
+
+### Type Safety
+
+``tsx
+interface ModalData {
+  title: string;
+  label: string;
+}
+
+interface ModalResult {
+  value: string;
+}
+
+const TestModal = React.forwardRef((props, ref) => {
+  const { modal, data } = useModalRef<ModalData, ModalResult>(ref, {
+    title: 'Default Title',
+    label: 'Default Label'
+  });
+  
+  // TypeScript will ensure data conforms to ModalData
+  // and modal callbacks return ModalResult
+});
+```
+
+### Strict Mode Support
+
+The library fully supports React's strict mode and concurrent features.
+
+## ⚠️ Error Handling
+
+Handle potential errors in your modal interactions:
+
+``jsx
+const showModal = async () => {
+  try {
+    const result = await modalRef.current.modal(data);
+    if (result !== undefined) {
+      // Handle success
+      console.log('Modal result:', result);
+    } else {
+      // Handle cancel/dismiss
+      console.log('Modal was cancelled');
+    }
+  } catch (error) {
+    // Handle errors during modal operations
+    console.error('Modal error:', error);
+  }
+};
+```
+
+## ⚡ Performance Optimization
+
+### Dependency Array Usage
+
+Use the dependency array to optimize re-renders:
+
+```jsx
+const { modal, data } = useModalRef(ref, defaultData, options, [dep1, dep2]);
+```
+
+### Lazy Initialization
+
+For expensive initializations, use function form of defaultData:
+
+```jsx
+const { modal, data } = useModalRef(ref, () => {
+  // Expensive computation only runs when needed
+  return {
+    title: getLocalizedTitle(),
+    items: generateInitialItems()
+  };
+});
+```
+
 ## 🎯 Advanced Features
 
 ### Custom Modal Types
 
 You can create custom modal types for any component:
 
-```jsx
+``jsx
 import { useCommonRef, mergeModalType } from 'use-modal-ref';
 
 // Register a custom modal type
@@ -609,7 +686,7 @@ const useTooltipRef = (ref, defaultData, options, deps = []) =>
 
 ### Before/After Hooks
 
-```jsx
+``jsx
 const { modal, data } = useModalRef(ref, defaultData, {
   beforeModal: async (data) => {
     // Called before modal opens
@@ -625,9 +702,60 @@ const { modal, data } = useModalRef(ref, defaultData, {
 
 ## 🤝 Contributing
 
-We welcome contributions! Please feel free to submit a Pull Request.
+We welcome all contributions! Here's how you can help:
+
+1. **Report bugs** - Use the issue tracker to report bugs
+2. **Suggest features** - Propose new features or improvements
+3. **Submit PRs** - Fix bugs or implement new features
+
 
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
+
+## ❓ FAQ
+
+### Why use refs instead of state for modal control?
+
+Refs provide direct access to modal methods without triggering re-renders, making the API more efficient and easier to use.
+
+### How to handle multiple modals?
+
+Each modal should have its own ref:
+
+```jsx
+function App() {
+  const modal1Ref = useRef(null);
+  const modal2Ref = useRef(null);
+  
+  return (
+    <>
+      <MyModal ref={modal1Ref} />
+      <AnotherModal ref={modal2Ref} />
+    </>
+  );
+}
+```
+
+### Can I use this with other UI libraries?
+
+Yes! The library is UI-agnostic. Here's an example with Material-UI:
+
+```jsx
+import { Dialog, DialogTitle, DialogContent } from '@mui/material';
+import useModalRef from 'use-modal-ref';
+
+const MaterialModal = React.forwardRef((props, ref) => {
+  const { modal, data } = useModalRef(ref, { title: 'Dialog' });
+  
+  return (
+    <Dialog {...modal.props} open={modal.props.visible}>
+      <DialogTitle>{data.title}</DialogTitle>
+      <DialogContent>
+        {/* Your content */}
+      </DialogContent>
+    </Dialog>
+  );
+};
+```
 
