@@ -123,7 +123,7 @@ const UserModal = React.forwardRef((props, ref) => {
     user: null
   }, {
     // You can perform initialization operations in this event, and the function's return value will be used as the new data returned from the useModalRef hook's data property
-    beforeModal(data) {
+    beforeModal({ user }) {
       form.setFieldsValue(user || {
         name: '',
         email: '',
@@ -630,12 +630,4 @@ We welcome contributions! Please feel free to submit a Pull Request.
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
-
----
-
-<div align="center">
-
-Made with ❤️ by the use-modal-ref community
-
-</div>
 
