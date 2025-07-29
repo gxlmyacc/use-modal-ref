@@ -41,7 +41,7 @@ pnpm add use-modal-ref
 
 ### Basic Modal Usage
 
-``jsx
+```jsx
 import React, { useState, useRef } from 'react';
 import { Modal, Button, Input } from 'antd';
 import useModalRef from 'use-modal-ref';
@@ -303,7 +303,7 @@ function SettingsPage() {
 <details>
 <summary>Click to expand</summary>
 
-``jsx
+```jsx
 // usePopoverRef.js
 import { useCommonRef, mergeModalType } from 'use-modal-ref';
 
@@ -398,7 +398,7 @@ function ColorPicker() {
 <details>
 <summary>Click to expand</summary>
 
-``jsx
+```jsx
 import React from 'react';
 import { Button } from 'antd';
 import TestModal from './TestModal';
@@ -433,7 +433,7 @@ function App() {
 <details>
 <summary>Click to expand</summary>
 
-``jsx
+```jsx
 import React from 'react';
 import { Button } from 'antd';
 import TestModal from './TestModal';
@@ -591,7 +591,7 @@ This library is written in TypeScript and provides full type definitions out of 
 
 ### Type Safety
 
-``tsx
+```tsx
 interface ModalData {
   title: string;
   label: string;
@@ -620,7 +620,7 @@ The library fully supports React's strict mode and concurrent features.
 
 Handle potential errors in your modal interactions:
 
-``jsx
+```jsx
 const showModal = async () => {
   try {
     const result = await modalRef.current.modal(data);
@@ -668,7 +668,7 @@ const { modal, data } = useModalRef(ref, () => {
 
 You can create custom modal types for any component:
 
-``jsx
+```jsx
 import { useCommonRef, mergeModalType } from 'use-modal-ref';
 
 // Register a custom modal type
@@ -686,7 +686,7 @@ const useTooltipRef = (ref, defaultData, options, deps = []) =>
 
 ### Before/After Hooks
 
-``jsx
+```jsx
 const { modal, data } = useModalRef(ref, defaultData, {
   beforeModal: async (data) => {
     // Called before modal opens

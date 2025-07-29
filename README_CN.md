@@ -41,7 +41,7 @@ pnpm add use-modal-ref
 
 ### 基础模态框使用
 
-``jsx
+```jsx
 import React, { useState, useRef } from 'react';
 import { Modal, Button, Input } from 'antd';
 import useModalRef from 'use-modal-ref';
@@ -218,7 +218,7 @@ function UserManagement() {
 <details>
 <summary>点击展开</summary>
 
-``jsx
+```jsx
 import React, { useState } from 'react';
 import { Drawer, Button, Input, Space } from 'antd';
 import { useDrawerRef } from 'use-modal-ref';
@@ -303,7 +303,7 @@ function SettingsPage() {
 <details>
 <summary>点击展开</summary>
 
-``jsx
+```jsx
 // usePopoverRef.js
 import { useCommonRef, mergeModalType } from 'use-modal-ref';
 
@@ -398,7 +398,7 @@ function ColorPicker() {
 <details>
 <summary>点击展开</summary>
 
-``jsx
+```jsx
 import React from 'react';
 import { Button } from 'antd';
 import TestModal from './TestModal';
@@ -433,7 +433,7 @@ function App() {
 <details>
 <summary>点击展开</summary>
 
-``jsx
+```jsx
 import React from 'react';
 import { Button } from 'antd';
 import TestModal from './TestModal';
@@ -591,7 +591,7 @@ function createRefComponent<T = any>(
 
 ### 类型安全
 
-``tsx
+```tsx
 interface ModalData {
   title: string;
   label: string;
@@ -644,7 +644,7 @@ const showModal = async () => {
 
 使用依赖数组来优化重渲染：
 
-``jsx
+```jsx
 const { modal, data } = useModalRef(ref, defaultData, options, [dep1, dep2]);
 ```
 
@@ -652,7 +652,7 @@ const { modal, data } = useModalRef(ref, defaultData, options, [dep1, dep2]);
 
 对于复杂的初始化操作，可以使用函数形式的 defaultData：
 
-``jsx
+```jsx
 const { modal, data } = useModalRef(ref, () => {
   // 昂贵的计算只在需要时运行
   return {
@@ -668,7 +668,7 @@ const { modal, data } = useModalRef(ref, () => {
 
 您可以为任何组件创建自定义模态框类型：
 
-``jsx
+```jsx
 import { useCommonRef, mergeModalType } from 'use-modal-ref';
 
 // 注册自定义模态框类型
@@ -686,7 +686,7 @@ const useTooltipRef = (ref, defaultData, options, deps = []) =>
 
 ### 前置/后置钩子
 
-``jsx
+```jsx
 const { modal, data } = useModalRef(ref, defaultData, {
   beforeModal: async (data) => {
     // 模态框打开前调用
