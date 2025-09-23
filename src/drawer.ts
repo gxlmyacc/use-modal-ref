@@ -1,9 +1,9 @@
 import useCommonRef, { ModalRefOption } from './common';
 
-function useDrawerRef<T extends Record<string, any>, U = any>(
+function useDrawerRef<T extends Record<string, any>, U = any, C extends Record<string, any> = {}>(
   ref: React.Ref<any>,
   defaultData: Partial<T>|(() => Partial<T>) = {},
-  options: ModalRefOption<'drawer', T, U> = {},
+  options: ModalRefOption<'drawer', T, U, C> = {},
   deps: React.DependencyList = []
 ) {
   return useCommonRef('drawer', ref, defaultData, options, deps);

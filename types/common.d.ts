@@ -1,7 +1,7 @@
 import React from 'react';
 declare type EndModalMethod = (result?: any, onDone?: () => void) => Promise<void>;
 declare type CancelModalMethod = (ex?: any, onDone?: () => void) => Promise<void>;
-export declare type ModalRefOption<P extends ModalType, T extends Record<string, any>, U, C extends Record<string, any> = Record<string, any>> = {
+export declare type ModalRefOption<P extends ModalType, T extends Record<string, any>, U, C extends Record<string, any> = {}> = {
     custom?: C;
     beforeModal?: (newData: Partial<T>, pause: (result: any, isError?: boolean) => void, options: Record<string, any>) => void | Partial<T> | Promise<void | Partial<T>>;
     afterModal?: (newData: any, options?: ModalModalOptions) => void;
@@ -44,7 +44,7 @@ export declare type ModalPropsTypeMap = {
         onClose: () => void;
     };
 };
-export declare type ModalRef<P extends ModalType = 'modal', T extends Record<string, any> = Record<string, any>, U = any, C extends Record<string, any> = Record<string, any>> = {
+export declare type ModalRef<P extends ModalType = 'modal', T extends Record<string, any> = Record<string, any>, U = any, C extends Record<string, any> = {}> = {
     readonly visible: boolean;
     readonly data: Partial<Omit<T, 'onCancel' | 'onOK'>> & {
         [key: string]: any;
@@ -74,7 +74,7 @@ export interface ModalVisibleProps {
     resolve: (value: any) => any;
     reject: (value: any) => any;
 }
-declare function useCommonRef<P extends ModalType, T extends Record<string, any>, U = any, C extends Record<string, any> = Record<string, any>>(modalType: P, ref: React.ForwardedRef<ModalRef<P, T, U, C>>, defaultData?: Partial<T> | (() => Partial<T>), options?: ModalRefOption<P, T, U, C>, deps?: React.DependencyList): {
+declare function useCommonRef<P extends ModalType, T extends Record<string, any>, U = any, C extends Record<string, any> = {}>(modalType: P, ref: React.ForwardedRef<ModalRef<P, T, U, C>>, defaultData?: Partial<T> | (() => Partial<T>), options?: ModalRefOption<P, T, U, C>, deps?: React.DependencyList): {
     modal: ModalRef<P, T, U, C>;
     data: Partial<Omit<T, "onOK" | "onCancel">> & {
         [key: string]: any;

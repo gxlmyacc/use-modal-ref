@@ -1,7 +1,7 @@
 /// <reference types="react" />
 import { ModalRefOption } from './common';
-declare function useDrawerRef<T extends Record<string, any>, U = any>(ref: React.Ref<any>, defaultData?: Partial<T> | (() => Partial<T>), options?: ModalRefOption<'drawer', T, U>, deps?: React.DependencyList): {
-    modal: import("./common").ModalRef<"drawer", T, U, Record<string, any>>;
+declare function useDrawerRef<T extends Record<string, any>, U = any, C extends Record<string, any> = {}>(ref: React.Ref<any>, defaultData?: Partial<T> | (() => Partial<T>), options?: ModalRefOption<'drawer', T, U, C>, deps?: React.DependencyList): {
+    modal: import("./common").ModalRef<"drawer", T, U, C>;
     data: Partial<Omit<T, "onOK" | "onCancel">> & {
         [key: string]: any;
     };

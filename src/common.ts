@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useCallback, useImperativeHandle } from 'react';
 import ReactDOM from 'react-dom';
-import { isFunction } from './utils';
+import { copyOwnProperties, isFunction } from './utils';
 
 function resolveDefaultData(data: any) {
   if (!data) return data;
@@ -20,7 +20,7 @@ export type ModalRefOption<
   P extends ModalType,
   T extends Record<string, any>,
   U,
-  C extends Record<string, any> = Record<string, any>
+  C extends Record<string, any> = {}
 > = {
   custom?: C,
   beforeModal?: (
@@ -95,7 +95,7 @@ export type ModalRef<
   P extends ModalType = 'modal',
   T extends Record<string, any> = Record<string, any>,
   U = any,
-  C extends Record<string, any> = Record<string, any>
+  C extends Record<string, any> = {}
 > = {
   readonly visible: boolean;
   readonly data: Partial<Omit<T, 'onCancel'|'onOK'>> & {
@@ -138,7 +138,7 @@ function useCommonRef<
   P extends ModalType,
   T extends Record<string, any>,
   U = any,
-  C extends Record<string, any> = Record<string, any>
+  C extends Record<string, any> = {}
 >(
   modalType: P,
   ref: React.ForwardedRef<ModalRef<P, T, U, C>>,
@@ -355,7 +355,7 @@ function useCommonRef<
       } as any;
 
       if (options.custom) {
-        Object.assign(ret, options.custom);
+        copyOwnProperties(ret, options.custom);
       }
 
       ret.endModal = (async function (result?: any, onDone?: () => void) {
