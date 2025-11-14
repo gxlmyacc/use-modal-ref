@@ -4,7 +4,7 @@ function useModalRef<T extends Record<string, any>, U = any, C extends Record<st
   ref: React.Ref<any>,
   defaultData: Partial<T>|(() => Partial<T>) = {},
   options: ModalRefOption<'modal', T, U, C> = {},
-  deps: React.DependencyList = []
+  deps: React.DependencyList = [],
 ) {
   return useCommonRef('modal', ref, defaultData, options, deps);
 }

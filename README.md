@@ -474,28 +474,126 @@ function App() {
 ### useModalRef
 
 ```typescript
-function useModalRef<T = any, U = any>(
+function useModalRef<T = any, U = any, C extends Record<string, any> = {}>(
   ref: React.Ref<any>,
   defaultData?: Partial<T> | (() => Partial<T>),
-  options?: ModalRefOption<'modal', T, U>,
+  options?: ModalRefOption<'modal', T, U, C>,
   deps?: React.DependencyList
 ): {
-  modal: ModalRefMethods<U>;
+  modal: ModalRef<'modal', T, U, C>;
   data: T;
+  setData: (newData: T | ((data: T) => T)) => void;
 }
 ```
 
 **Parameters:**
 
-- `ref: React.Ref<any>` - React ref object for controlling modal show/hide
-- `defaultData?: Partial<T> | (() => Partial<T>)` - Default data, can be an object or a function returning an object
-- `options?: ModalRefOption<'modal', T, U>` - Configuration options including lifecycle hooks
-- `deps?: React.DependencyList` - Dependency array, reinitializes when dependencies change
+- `ref: React.Ref<any>` - React ref object for controlling modal show/hide. Must be passed to the modal component via `React.forwardRef`
+- `defaultData?: Partial<T> | (() => Partial<T>)` - Default data, can be an object or a function returning an object. When using a function, it supports lazy initialization and only executes when needed
+- `options?: ModalRefOption<'modal', T, U, C>` - Configuration options object with the following properties:
+  - `alwaysResolve?: boolean` - Whether to always resolve the Promise, even when `cancelModal` is called
+  - `custom?: C` - Custom properties object, these properties will be added to the returned `modal` object. You can access these custom methods or properties via ref. **Important**: The type information of methods or properties registered in `custom` will be bound to `ModalRef`, providing full TypeScript type support and ensuring type safety
+  
+  **custom parameter usage example:**
+  
+  ```tsx
+  import React, { useState, useRef } from 'react';
+  import { Modal } from 'antd';
+  import useModalRef, { ModalRef } from 'use-modal-ref';
+  
+  const TestModal = React.forwardRef((props, ref) => {
+    const [formData, setFormData] = useState({});
+    
+    // Define custom methods in the component
+    const resetForm = () => {
+      setFormData({});
+      console.log('Form reset');
+    };
+    
+    const validate = () => {
+      // Validation logic
+      return Object.keys(formData).length > 0;
+    };
+    
+    const getFormData = () => {
+      return formData;
+    };
+    
+    const { modal, data } = useModalRef<{ title: string }, any>(
+      ref,
+      {
+        title: 'Default Title'
+      },
+      {
+        // Register these methods in custom
+        // TypeScript will automatically infer types from the custom object, no need to explicitly define an interface
+        custom: {
+          resetForm,
+          validate,
+          getFormData
+        }
+      }
+    );
+    
+    // Inside the component, you can access custom methods via modal.resetForm(), modal.validate(), etc.
+
+    const handleReset = () => {
+      modalRef.current?.resetForm(); // Call custom method, TypeScript provides type hints
+    };
+    
+    const handleValidate = () => {
+      const isValid = modalRef.current?.validate(); // Call custom method, return type is boolean
+      console.log('Validation result:', isValid);
+    };
+    
+    return (
+      <Modal {...modal.props} title={data.title}>
+        {/* Modal content */}
+        <button onClick={handleReset}>Reset Form</button>
+        <button onClick={handleValidate}>Validate Form</button>
+      </Modal>
+    );
+  });
+  
+  // When using the component, you can access custom methods via ref
+  // TypeScript will automatically infer types from the custom parameter in useModalRef,
+  // modalRef.current will automatically have type definitions for resetForm, validate, getFormData methods
+  // This provides full type hints and type checking, ensuring type safety
+  function App() {
+    const modalRef = useRef<ModalRef<'modal'>>['modal']>(null);
+    
+    return (
+      <div>
+        <button onClick={() => modalRef.current?.modal({ title: 'Test' })}>
+          Open Modal
+        </button>
+        <TestModal ref={modalRef} />
+      </div>
+    );
+  }
+  ```
+  
+  - `beforeModal?: (newData: Partial<T>, pause: (result: any, isError?: boolean) => void, options: Record<string, any>) => void | Partial<T> | Promise<void | Partial<T>>` - Hook function called before modal opens, can modify data or pause the opening process
+  - `afterModal?: (newData: T, options?: ModalModalOptions) => void` - Hook function called after modal opens
+  - `init?: (newData: T, options: Record<string, any>) => void | Promise<void>` - Initialization hook function, executed after modal opens
+  - `beforeCloseModal?: (next: (ok: any) => void, action: ModalAction, modal: ModalRef<'modal', T, U, C>) => void | Promise<void>` - Hook function called before modal closes, can prevent closing by calling `next(false)`
+  - `afterCloseModal?: (newData: T, action: ModalAction, modal: ModalRef<'modal', T, U, C>) => void | Promise<void>` - Hook function called after modal closes
+- `deps?: React.DependencyList` - Dependency array, reinitializes options when dependencies change
 
 **Returns:**
 
-- `modal: ModalRefMethods<U>` - Modal control methods object
-- `data: T` - Current modal data
+- `modal: ModalRef<'modal', T, U, C>` - Modal control object with the following properties and methods:
+  - `visible: boolean` - Read-only property indicating whether the modal is visible
+  - `data: T` - Read-only property containing current modal data
+  - `props: { visible: boolean, onCancel: () => void }` - Read-only property for props to pass to Modal component
+  - `options: ModalRefOption<'modal', T, U, C>` - Read-only property containing current configuration options
+  - `modalOptions: ModalModalOptions` - Read-only property containing current modal options
+  - `modalPromise: Promise<U> | null` - Read-only property containing current modal Promise
+  - `modal(newData: T, options?: ModalModalOptions): Promise<U>` - Opens the modal and returns a Promise
+  - `endModal(result?: U, onDone?: () => void): Promise<void>` - Ends the modal and returns result
+  - `cancelModal(ex?: any, onDone?: () => void): Promise<void>` - Cancels the modal
+- `data: T` - Current modal data (same as `modal.data`)
+- `setData: (newData: T | ((data: T) => T)) => void` - Function to update modal data
 
 ### useDrawerRef
 
@@ -554,36 +652,234 @@ function useCommonRef<P = string, T = any, U = any>(
 ### showRefModal
 
 ```typescript
-function showRefModal<T = any, U = any>(
-  Component: React.ComponentType<any>,
-  data?: T
-): Promise<U | undefined>
+function showRefModal<
+  M extends ModalRef<any, any>,
+  D extends M extends ModalRef<any, infer D> ? D : Record<string, any>,
+  U extends M extends ModalRef<any, any, infer U> ? U : any
+>(
+  RefModal: React.ForwardRefExoticComponent<React.RefAttributes<M>>,
+  modalData?: D,
+  options?: {
+    /** Component props */
+    props?: Record<string, any>;
+    /** Method name to call modal, defaults to 'modal' */
+    modalMethod?: string;
+    /** Method name to cancel modal, defaults to 'cancelModal' */
+    cancelMethod?: string;
+    /** Modal options */
+    modalOptions?: ModalModalOptions;
+    /** Whether to automatically close modal when URL changes */
+    closeWhenUrlChange?: boolean;
+    /** Container selector */
+    selector?: string;
+    /** Container ID */
+    id?: string;
+    /** Container element or function returning container */
+    container?: HTMLElement | null | (() => HTMLElement);
+    /** Container class name */
+    className?: string;
+    /** Callback after ref is created */
+    onRef?: (ref: any, destroy: () => void) => void;
+    /** Callback before container is appended, return true to prevent auto append */
+    onAppendContainer?: (container: HTMLElement) => void | boolean;
+    /** Callback before container is removed, return true to prevent auto remove */
+    onRemoveContainer?: (container: HTMLElement) => void | boolean;
+    /** Callback before component is destroyed, return true to prevent auto destroy */
+    onDestroyComponent?: (container: HTMLElement) => void | boolean;
+    /** Destroy delay in milliseconds, defaults to 50 */
+    destroyDelay?: number;
+  }
+): Promise<U>
 ```
 
 **Parameters:**
 
-- `Component: React.ComponentType<any>` - Modal component to display
-- `data?: T` - Data to pass to the modal
+- `RefModal: React.ForwardRefExoticComponent<React.RefAttributes<M>>` - Modal component to display, must be wrapped with `React.forwardRef`
+- `modalData?: D` - Data to pass to the modal, will be passed as the first argument to the `modal` method
+- `options?: object` - Configuration options object with the following properties:
+  - `props?: Record<string, any>` - Props to pass to the component
+  - `modalMethod?: string` - Method name to call modal, defaults to `'modal'`
+  - `cancelMethod?: string` - Method name to cancel modal, defaults to `'cancelModal'`
+  - `modalOptions?: ModalModalOptions` - Modal options, will be passed as the second argument to the `modal` method
+  - `closeWhenUrlChange?: boolean` - Whether to automatically close modal when URL changes, defaults to `false`
+  - `selector?: string` - Container selector for finding existing container element
+  - `id?: string` - Container ID for finding or creating container element
+  - `container?: HTMLElement | null | (() => HTMLElement)` - Container element or function returning container
+  - `className?: string` - Container class name, only used when creating new container
+  - `onRef?: (ref: any, destroy: () => void) => void` - Callback function after ref is created
+  - `onAppendContainer?: (container: HTMLElement) => void | boolean` - Callback before container is appended to DOM, return `true` to prevent auto append
+  - `onRemoveContainer?: (container: HTMLElement) => void | boolean` - Callback before container is removed from DOM, return `true` to prevent auto remove
+  - `onDestroyComponent?: (container: HTMLElement) => void | boolean` - Callback before component is destroyed, return `true` to prevent auto destroy
+  - `destroyDelay?: number` - Destroy delay in milliseconds, defaults to `50`
 
 **Returns:**
 
-- `Promise<U | undefined>` - Returns modal result, undefined if user cancels
+- `Promise<U>` - Returns modal result Promise, will be rejected if user cancels
 
 ### createRefComponent
 
 ```typescript
-function createRefComponent<T = any>(
-  Component: React.ComponentType<any>
-): Promise<[React.RefObject<T>, () => void]>
+function createRefComponent<
+  T extends React.ForwardRefExoticComponent<React.RefAttributes<any>>,
+  P extends T extends React.ForwardRefExoticComponent<React.RefAttributes<infer P>> ? P : never,
+  R extends T extends React.ForwardRefExoticComponent<React.RefAttributes<P & infer R>> ? R : never
+>(
+  RefComponent: T,
+  props?: P | null,
+  options?: {
+    /** Container selector */
+    selector?: string;
+    /** Container ID */
+    id?: string;
+    /** Container element or function returning container */
+    container?: HTMLElement | null | (() => HTMLElement);
+    /** Container class name */
+    className?: string;
+    /** Callback after ref is created */
+    onRef?: (ref: any, destroy: () => void) => void;
+    /** Callback before container is appended, return true to prevent auto append */
+    onAppendContainer?: (container: HTMLElement) => void | boolean;
+    /** Callback before container is removed, return true to prevent auto remove */
+    onRemoveContainer?: (container: HTMLElement) => void | boolean;
+    /** Callback before component is destroyed, return true to prevent auto destroy */
+    onDestroyComponent?: (container: HTMLElement) => void | boolean;
+    /** Destroy delay in milliseconds, defaults to 50 */
+    destroyDelay?: number;
+  }
+): Promise<[ref: R, destroy: () => void]>
 ```
 
 **Parameters:**
 
-- `Component: React.ComponentType<any>` - Component to create
+- `RefComponent: T` - Component to create, must be wrapped with `React.forwardRef`
+- `props?: P | null` - Props to pass to the component
+- `options?: object` - Configuration options object with the following properties:
+  - `selector?: string` - Container selector for finding existing container element. If found, will use that container; otherwise creates a new one
+  - `id?: string` - Container ID for finding or creating container element. If found, will use that container; otherwise creates a new one and sets this ID
+  - `container?: HTMLElement | null | (() => HTMLElement)` - Container element or function returning container. If provided, will use this container directly
+  - `className?: string` - Container class name, only used when creating new container
+  - `onRef?: (ref: any, destroy: () => void) => void` - Callback function after ref is created, receives ref object and destroy function
+  - `onAppendContainer?: (container: HTMLElement) => void | boolean` - Callback function before container is appended to DOM, return `true` to prevent auto append to `document.body`
+  - `onRemoveContainer?: (container: HTMLElement) => void | boolean` - Callback function before container is removed from DOM, return `true` to prevent auto remove
+  - `onDestroyComponent?: (container: HTMLElement) => void | boolean` - Callback function before component is destroyed, return `true` to prevent auto call to `ReactDOM.unmountComponentAtNode`
+  - `destroyDelay?: number` - Destroy delay in milliseconds, defaults to `50`. Used to delay destroy operation to avoid incomplete animations
 
 **Returns:**
 
-- `Promise<[React.RefObject<T>, () => void]>` - Returns a tuple containing the component's ref object and destroy function
+- `Promise<[ref: R, destroy: () => void]>` - Returns a Promise that resolves to a tuple:
+  - `ref: R` - Component's ref object containing all methods and properties exposed by the component
+  - `destroy: () => void` - Destroy function that will unmount the component and remove the container (if container was auto-created)
+
+### ModalRef
+
+`ModalRef` is the type definition for the modal control object, containing the following properties and methods:
+
+```typescript
+type ModalRef<
+  P extends ModalType = 'modal',
+  T extends Record<string, any> = Record<string, any>,
+  U = any,
+  C extends Record<string, any> = {}
+> = {
+  /** Read-only property: whether modal is visible */
+  readonly visible: boolean;
+  /** Read-only property: current modal data */
+  readonly data: Partial<Omit<T, 'onCancel'|'onOK'>> & { [key: string]: any };
+  /** Read-only property: props to pass to Modal/Drawer component */
+  readonly props: ModalPropsTypeMap[P];
+  /** Read-only property: current configuration options */
+  readonly options: ModalRefOption<P, T, U, C>;
+  /** Read-only property: current modal options */
+  readonly modalOptions: ModalModalOptions;
+  /** Read-only property: current modal Promise */
+  readonly modalPromise: null | Promise<any> | PromiseLike<any>;
+
+  /** Opens modal and returns Promise */
+  modal(newData: T, options?: ModalModalOptions): Promise<U>;
+
+  /** Ends modal and returns result */
+  endModal: (result?: U, onDone?: () => void) => Promise<void>;
+  
+  /** Cancels modal */
+  cancelModal: (ex?: any, onDone?: () => void) => Promise<void>;
+
+  [key: string]: any;
+} & {
+  [key in keyof C]: C[key];
+}
+```
+
+**Property Descriptions:**
+
+- `visible: boolean` - Read-only property indicating whether the modal is currently visible
+- `data: T` - Read-only property containing the current modal data object
+- `props: ModalPropsTypeMap[P]` - Read-only property returning appropriate props based on modal type:
+  - For `'modal'` type: `{ visible: boolean, onCancel: () => void }`
+  - For `'drawer'` type: `{ open?: boolean, onClose?: () => void }`
+  - For `'popover'` type: `{ visible: boolean, onClose: () => void }`
+- `options: ModalRefOption<P, T, U, C>` - Read-only property containing current configuration options
+- `modalOptions: ModalModalOptions` - Read-only property containing current modal options
+- `modalPromise: Promise<U> | null` - Read-only property containing current modal Promise, `null` if modal is not open
+
+**Method Descriptions:**
+
+- `modal(newData: T, options?: ModalModalOptions): Promise<U>` - Method to open the modal
+  - `newData: T` - New data to pass to the modal, will be merged with `defaultData`
+  - `options?: ModalModalOptions` - Modal options with the following properties:
+    - `modalDataEvent?: boolean` - Whether to enable data events (`onOK`, `onCancel`)
+    - `afterModal?: (newData: any, options?: ModalModalOptions) => void` - Hook after modal opens
+    - `beforeCloseModal?: (next: (ok: any) => void, action: ModalAction) => void | Promise<void>` - Hook before close
+    - `beforeEndModal?: (value?: any) => Promise<any>` - Hook before end, can modify return value
+    - `beforeCancelModal?: (reason?: any) => Promise<any>` - Hook before cancel, can modify cancel reason
+    - `afterCloseModal?: (newData: any, action: ModalAction, modal: ModalRef<any, any, any>) => void | Promise<void>` - Hook after close
+    - `forceVisible?: boolean` - Force show, even if another modal is already open
+    - `alwaysResolve?: boolean` - Whether to always resolve the Promise
+  - Returns `Promise<U>`, resolves with result, rejects when cancelled
+- `endModal(result?: U, onDone?: () => void): Promise<void>` - Ends the modal
+  - `result?: U` - Result value to return
+  - `onDone?: () => void` - Callback function after completion
+- `cancelModal(ex?: any, onDone?: () => void): Promise<void>` - Cancels the modal
+  - `ex?: any` - Cancel reason, defaults to `'cancel'`
+  - `onDone?: () => void` - Callback function after completion
+
+### getUrlListener
+
+Gets the URL listener instance for listening to browser URL changes.
+
+```typescript
+function getUrlListener(): UrlListener
+
+interface UrlListener {
+  addListener: (
+    listener: (url: string) => void,
+    options?: { once?: boolean }
+  ) => () => void;
+}
+```
+
+**Returns:**
+
+- `UrlListener` - URL listener object with the following method:
+  - `addListener(listener: (url: string) => void, options?: { once?: boolean }): () => void` - Adds a URL change listener
+    - `listener: (url: string) => void` - Listener function called when URL changes, receives new URL as parameter
+    - `options?: { once?: boolean }` - Options object, when `once` is `true`, listener executes only once
+    - Returns a function to remove the listener
+
+**Usage Example:**
+
+```typescript
+import { getUrlListener } from 'use-modal-ref';
+
+const urlListener = getUrlListener();
+
+// Add listener
+const removeListener = urlListener.addListener((url) => {
+  console.log('URL changed to:', url);
+}, { once: true });
+
+// Remove listener
+removeListener();
+```
 
 ## 📘 TypeScript Support
 

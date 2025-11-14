@@ -1,7 +1,8 @@
 import React from 'react';
-declare type EndModalMethod = (result?: any, onDone?: () => void) => Promise<void>;
-declare type CancelModalMethod = (ex?: any, onDone?: () => void) => Promise<void>;
-export declare type ModalRefOption<P extends ModalType, T extends Record<string, any>, U, C extends Record<string, any> = {}> = {
+type EndModalMethod = (result?: any, onDone?: () => void) => Promise<void>;
+type CancelModalMethod = (ex?: any, onDone?: () => void) => Promise<void>;
+export type ModalRefOption<P extends ModalType, T extends Record<string, any>, U, C extends Record<string, any> = {}> = {
+    alwaysResolve?: boolean;
     custom?: C;
     beforeModal?: (newData: Partial<T>, pause: (result: any, isError?: boolean) => void, options: Record<string, any>) => void | Partial<T> | Promise<void | Partial<T>>;
     afterModal?: (newData: any, options?: ModalModalOptions) => void;
@@ -10,27 +11,27 @@ export declare type ModalRefOption<P extends ModalType, T extends Record<string,
     afterCloseModal?: (newData: T, action: ModalAction, modal: ModalRef<P, T, U>) => void | Promise<void>;
     [key: string]: any;
 };
-export declare type ModalModalOptions = {
+export type ModalModalOptions = {
     modalDataEvent?: boolean;
     afterModal?: (newData: any, options?: ModalModalOptions) => void;
     beforeCloseModal?: (next: (ok: any) => void, action: ModalAction) => void | Promise<void>;
     beforeEndModal?: (value?: any) => Promise<any>;
     beforeCancelModal?: (reason?: any) => Promise<any>;
-    afterCloseModal?: (newData: any, action: ModalAction) => void | Promise<void>;
+    afterCloseModal?: (newData: any, action: ModalAction, modal: ModalRef<any, any, any, any>) => void | Promise<void>;
     forceVisible?: boolean;
     alwaysResolve?: boolean;
     [key: string]: any;
 };
-export declare type ModalAction = 'end' | 'cancel';
-export declare type ModalType = 'modal' | 'drawer' | 'popover';
-export declare type ModalTypeItem = {
+export type ModalAction = 'end' | 'cancel';
+export type ModalType = 'modal' | 'drawer' | 'popover';
+export type ModalTypeItem = {
     visible: string;
     onClose: string;
 };
-export declare type ModalTypeMap = {
+export type ModalTypeMap = {
     [key in ModalType]: ModalTypeItem;
 };
-export declare type ModalPropsTypeMap = {
+export type ModalPropsTypeMap = {
     'modal': {
         visible: boolean;
         onCancel: () => void;
@@ -44,7 +45,7 @@ export declare type ModalPropsTypeMap = {
         onClose: () => void;
     };
 };
-export declare type ModalRef<P extends ModalType = 'modal', T extends Record<string, any> = Record<string, any>, U = any, C extends Record<string, any> = {}> = {
+export type ModalRef<P extends ModalType = 'modal', T extends Record<string, any> = Record<string, any>, U = any, C extends Record<string, any> = {}> = {
     readonly visible: boolean;
     readonly data: Partial<Omit<T, 'onCancel' | 'onOK'>> & {
         [key: string]: any;
@@ -76,27 +77,11 @@ export interface ModalVisibleProps {
 }
 declare function useCommonRef<P extends ModalType, T extends Record<string, any>, U = any, C extends Record<string, any> = {}>(modalType: P, ref: React.ForwardedRef<ModalRef<P, T, U, C>>, defaultData?: Partial<T> | (() => Partial<T>), options?: ModalRefOption<P, T, U, C>, deps?: React.DependencyList): {
     modal: ModalRef<P, T, U, C>;
-    data: Partial<Omit<T, "onOK" | "onCancel">> & {
+    data: Partial<Omit<T, "onCancel" | "onOK">> & {
         [key: string]: any;
     };
     setData: (newData: T | ((data: T) => T)) => void;
 };
 declare function mergeModalType(map: Partial<ModalTypeMap>): ModalTypeMap & Partial<ModalTypeMap>;
-declare function createRefComponent<T extends React.ForwardRefExoticComponent<React.RefAttributes<Record<string, any> & any>>, P extends T extends React.ForwardRefExoticComponent<React.RefAttributes<infer P & any>> ? P : never, R extends T extends React.ForwardRefExoticComponent<React.RefAttributes<P & infer R>> ? R : never>(RefComponent: T, props?: P | null, options?: {
-    id?: string;
-    selector?: string;
-    container?: HTMLElement | null | (() => HTMLElement);
-    className?: string;
-    onRef?: (ref: any, destroy: () => void) => void;
-    onAppendContainer?: (container: HTMLElement) => void | boolean;
-    onRemoveContainer?: (container: HTMLElement) => void | boolean;
-    onDestroyComponent?: (container: HTMLElement) => void | boolean;
-    destroyDelay?: number;
-}): Promise<[ref: R, destroy: () => void]>;
-declare function showRefModal<M extends ModalRef<any, any>, D extends M extends ModalRef<any, infer D> ? D extends Record<string, any> ? D : Record<string, any> : Record<string, any>, U extends M extends ModalRef<any, any, infer U> ? U extends never ? any : U : Record<string, any>>(RefModal: React.ForwardRefExoticComponent<React.RefAttributes<M>>, modalData?: D, options?: Parameters<typeof createRefComponent>[2] & {
-    props?: Record<string, any>;
-    modalMethod?: string;
-    closeWhenUrlChange?: boolean;
-}): Promise<U>;
-export { mergeModalType, showRefModal, createRefComponent, };
+export { mergeModalType, };
 export default useCommonRef;

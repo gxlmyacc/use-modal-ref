@@ -474,28 +474,126 @@ function App() {
 ### useModalRef
 
 ```typescript
-function useModalRef<T = any, U = any>(
+function useModalRef<T = any, U = any, C extends Record<string, any> = {}>(
   ref: React.Ref<any>,
   defaultData?: Partial<T> | (() => Partial<T>),
-  options?: ModalRefOption<'modal', T, U>,
+  options?: ModalRefOption<'modal', T, U, C>,
   deps?: React.DependencyList
 ): {
-  modal: ModalRefMethods<U>;
+  modal: ModalRef<'modal', T, U, C>;
   data: T;
+  setData: (newData: T | ((data: T) => T)) => void;
 }
 ```
 
 **参数说明：**
 
-- `ref: React.Ref<any>` - React ref 对象，用于控制模态框的显示和隐藏
-- `defaultData?: Partial<T> | (() => Partial<T>)` - 默认数据，可以是对象或返回对象的函数
-- `options?: ModalRefOption<'modal', T, U>` - 配置选项，包含生命周期钩子等
-- `deps?: React.DependencyList` - 依赖数组，当依赖变化时重新初始化
+- `ref: React.Ref<any>` - React ref 对象，用于控制模态框的显示和隐藏。必须通过 `React.forwardRef` 传递给模态框组件
+- `defaultData?: Partial<T> | (() => Partial<T>)` - 默认数据，可以是对象或返回对象的函数。当使用函数形式时，支持懒初始化，仅在需要时执行
+- `options?: ModalRefOption<'modal', T, U, C>` - 配置选项对象，包含以下属性：
+  - `alwaysResolve?: boolean` - 是否总是 resolve Promise，即使调用 `cancelModal` 也会 resolve
+  - `custom?: C` - 自定义属性对象，这些属性会被添加到返回的 `modal` 对象上。可以通过 ref 访问这些自定义方法或属性。**重要**：`custom` 中注册的方法或属性的类型信息会绑定到 `ModalRef` 上，提供完整的 TypeScript 类型支持，确保类型安全
+  
+  **custom 参数使用示例：**
+  
+  ```tsx
+  import React, { useState, useRef } from 'react';
+  import { Modal } from 'antd';
+  import useModalRef, { ModalRef } from 'use-modal-ref';
+  
+  const TestModal = React.forwardRef((props, ref) => {
+    const [formData, setFormData] = useState({});
+    
+    // 在组件中定义自定义方法
+    const resetForm = () => {
+      setFormData({});
+      console.log('表单已重置');
+    };
+    
+    const validate = () => {
+      // 验证逻辑
+      return Object.keys(formData).length > 0;
+    };
+    
+    const getFormData = () => {
+      return formData;
+    };
+    
+    const { modal, data } = useModalRef<{ title: string }, any>(
+      ref,
+      {
+        title: '默认标题'
+      },
+      {
+        // 在 custom 中注册这些方法
+        // TypeScript 会自动从 custom 对象推断类型，无需显式定义接口
+        custom: {
+          resetForm,
+          validate,
+          getFormData
+        }
+      }
+    );
+    
+    // 在组件内部可以通过 modal.resetForm()、modal.validate() 等访问自定义方法
+    const handleReset = () => {
+      modal.resetForm(); // 调用自定义方法，TypeScript 会提供类型提示
+    };
+    
+    const handleValidate = () => {
+      const isValid = modal.validate(); // 调用自定义方法，返回类型为 boolean
+      console.log('验证结果:', isValid);
+    };
+    
+     
+    return (
+      <Modal {...modal.props} title={data.title}>
+        <button onClick={handleReset}>重置表单</button>
+        <button onClick={handleValidate}>验证表单</button>
+      </Modal>
+    );
+  });
+  
+  // 使用组件时，可以通过 ref 访问自定义方法
+  // TypeScript 会自动从 useModalRef 的 custom 参数推断类型，
+  // modalRef.current 上会自动拥有 resetForm、validate、getFormData 等方法的类型定义
+  // 提供完整的类型提示和类型检查，确保类型安全
+  function App() {
+    const modalRef = useRef<ModalRef<'modal'>>(null);
+
+    
+    return (
+      <div>
+        <button onClick={() => modalRef.current?.modal({ title: '测试' })}>
+          打开模态框
+        </button>
+        <TestModal ref={modalRef} />
+      </div>
+    );
+  }
+  ```
+  
+  - `beforeModal?: (newData: Partial<T>, pause: (result: any, isError?: boolean) => void, options: Record<string, any>) => void | Partial<T> | Promise<void | Partial<T>>` - 模态框打开前的钩子函数，可以修改数据或暂停打开流程
+  - `afterModal?: (newData: T, options?: ModalModalOptions) => void` - 模态框打开后的钩子函数
+  - `init?: (newData: T, options: Record<string, any>) => void | Promise<void>` - 初始化钩子函数，在模态框打开后执行
+  - `beforeCloseModal?: (next: (ok: any) => void, action: ModalAction, modal: ModalRef<'modal', T, U, C>) => void | Promise<void>` - 模态框关闭前的钩子函数，可以通过 `next(false)` 阻止关闭
+  - `afterCloseModal?: (newData: T, action: ModalAction, modal: ModalRef<'modal', T, U, C>) => void | Promise<void>` - 模态框关闭后的钩子函数
+- `deps?: React.DependencyList` - 依赖数组，当依赖变化时重新初始化选项
 
 **返回值：**
 
-- `modal: ModalRefMethods<U>` - 模态框控制方法对象
-- `data: T` - 当前模态框数据
+- `modal: ModalRef<'modal', T, U, C>` - 模态框控制对象，包含以下属性和方法：
+  - `visible: boolean` - 只读属性，表示模态框是否可见
+  - `data: T` - 只读属性，当前模态框数据
+  - `props: { visible: boolean, onCancel: () => void }` - 只读属性，用于传递给 Modal 组件的 props
+  - `options: ModalRefOption<'modal', T, U, C>` - 只读属性，当前配置选项
+  - `modalOptions: ModalModalOptions` - 只读属性，当前模态框选项
+  - `modalPromise: Promise<U> | null` - 只读属性，当前模态框的 Promise
+  - `modal(newData: T, options?: ModalModalOptions): Promise<U>` - 打开模态框并返回 Promise
+  - `endModal(result?: U, onDone?: () => void): Promise<void>` - 结束模态框并返回结果
+  - `cancelModal(ex?: any, onDone?: () => void): Promise<void>` - 取消模态框
+- `data: T` - 当前模态框数据（与 `modal.data` 相同）
+- `setData: (newData: T | ((data: T) => T)) => void` - 更新模态框数据的函数
 
 ### useDrawerRef
 
@@ -554,36 +652,234 @@ function useCommonRef<P = string, T = any, U = any>(
 ### showRefModal
 
 ```typescript
-function showRefModal<T = any, U = any>(
-  Component: React.ComponentType<any>,
-  data?: T
-): Promise<U | undefined>
+function showRefModal<
+  M extends ModalRef<any, any>,
+  D extends M extends ModalRef<any, infer D> ? D : Record<string, any>,
+  U extends M extends ModalRef<any, any, infer U> ? U : any
+>(
+  RefModal: React.ForwardRefExoticComponent<React.RefAttributes<M>>,
+  modalData?: D,
+  options?: {
+    /** 组件 props */
+    props?: Record<string, any>;
+    /** 调用模态框的方法名，默认为 'modal' */
+    modalMethod?: string;
+    /** 取消模态框的方法名，默认为 'cancelModal' */
+    cancelMethod?: string;
+    /** 模态框选项 */
+    modalOptions?: ModalModalOptions;
+    /** 是否在 URL 变化时自动关闭模态框 */
+    closeWhenUrlChange?: boolean;
+    /** 容器选择器 */
+    selector?: string;
+    /** 容器 ID */
+    id?: string;
+    /** 容器元素或返回容器的函数 */
+    container?: HTMLElement | null | (() => HTMLElement);
+    /** 容器类名 */
+    className?: string;
+    /** ref 创建后的回调 */
+    onRef?: (ref: any, destroy: () => void) => void;
+    /** 容器追加前的回调，返回 true 可阻止自动追加 */
+    onAppendContainer?: (container: HTMLElement) => void | boolean;
+    /** 容器移除前的回调，返回 true 可阻止自动移除 */
+    onRemoveContainer?: (container: HTMLElement) => void | boolean;
+    /** 组件销毁前的回调，返回 true 可阻止自动销毁 */
+    onDestroyComponent?: (container: HTMLElement) => void | boolean;
+    /** 销毁延迟时间（毫秒），默认为 50 */
+    destroyDelay?: number;
+  }
+): Promise<U>
 ```
 
 **参数说明：**
 
-- `Component: React.ComponentType<any>` - 要显示的模态框组件
-- `data?: T` - 传递给模态框的数据
+- `RefModal: React.ForwardRefExoticComponent<React.RefAttributes<M>>` - 要显示的模态框组件，必须使用 `React.forwardRef` 包装
+- `modalData?: D` - 传递给模态框的数据，会作为 `modal` 方法的第一个参数
+- `options?: object` - 配置选项对象，包含以下属性：
+  - `props?: Record<string, any>` - 传递给组件的 props
+  - `modalMethod?: string` - 调用模态框的方法名，默认为 `'modal'`
+  - `cancelMethod?: string` - 取消模态框的方法名，默认为 `'cancelModal'`
+  - `modalOptions?: ModalModalOptions` - 模态框选项，会作为 `modal` 方法的第二个参数
+  - `closeWhenUrlChange?: boolean` - 是否在 URL 变化时自动关闭模态框，默认为 `false`
+  - `selector?: string` - 容器选择器，用于查找已存在的容器元素
+  - `id?: string` - 容器 ID，用于查找或创建容器元素
+  - `container?: HTMLElement | null | (() => HTMLElement)` - 容器元素或返回容器的函数
+  - `className?: string` - 容器类名，仅在创建新容器时使用
+  - `onRef?: (ref: any, destroy: () => void) => void` - ref 创建后的回调函数
+  - `onAppendContainer?: (container: HTMLElement) => void | boolean` - 容器追加到 DOM 前的回调，返回 `true` 可阻止自动追加
+  - `onRemoveContainer?: (container: HTMLElement) => void | boolean` - 容器从 DOM 移除前的回调，返回 `true` 可阻止自动移除
+  - `onDestroyComponent?: (container: HTMLElement) => void | boolean` - 组件销毁前的回调，返回 `true` 可阻止自动销毁
+  - `destroyDelay?: number` - 销毁延迟时间（毫秒），默认为 `50`
 
 **返回值：**
 
-- `Promise<U | undefined>` - 返回模态框的结果，如果用户取消则返回 undefined
+- `Promise<U>` - 返回模态框的结果 Promise，如果用户取消则会被 reject
 
 ### createRefComponent
 
 ```typescript
-function createRefComponent<T = any>(
-  Component: React.ComponentType<any>
-): Promise<[React.RefObject<T>, () => void]>
+function createRefComponent<
+  T extends React.ForwardRefExoticComponent<React.RefAttributes<any>>,
+  P extends T extends React.ForwardRefExoticComponent<React.RefAttributes<infer P>> ? P : never,
+  R extends T extends React.ForwardRefExoticComponent<React.RefAttributes<P & infer R>> ? R : never
+>(
+  RefComponent: T,
+  props?: P | null,
+  options?: {
+    /** 容器选择器 */
+    selector?: string;
+    /** 容器 ID */
+    id?: string;
+    /** 容器元素或返回容器的函数 */
+    container?: HTMLElement | null | (() => HTMLElement);
+    /** 容器类名 */
+    className?: string;
+    /** ref 创建后的回调 */
+    onRef?: (ref: any, destroy: () => void) => void;
+    /** 容器追加前的回调，返回 true 可阻止自动追加 */
+    onAppendContainer?: (container: HTMLElement) => void | boolean;
+    /** 容器移除前的回调，返回 true 可阻止自动移除 */
+    onRemoveContainer?: (container: HTMLElement) => void | boolean;
+    /** 组件销毁前的回调，返回 true 可阻止自动销毁 */
+    onDestroyComponent?: (container: HTMLElement) => void | boolean;
+    /** 销毁延迟时间（毫秒），默认为 50 */
+    destroyDelay?: number;
+  }
+): Promise<[ref: R, destroy: () => void]>
 ```
 
 **参数说明：**
 
-- `Component: React.ComponentType<any>` - 要创建的组件
+- `RefComponent: T` - 要创建的组件，必须使用 `React.forwardRef` 包装
+- `props?: P | null` - 传递给组件的 props
+- `options?: object` - 配置选项对象，包含以下属性：
+  - `selector?: string` - 容器选择器，用于查找已存在的容器元素。如果找到，将使用该容器；否则创建新容器
+  - `id?: string` - 容器 ID，用于查找或创建容器元素。如果找到，将使用该容器；否则创建新容器并设置该 ID
+  - `container?: HTMLElement | null | (() => HTMLElement)` - 容器元素或返回容器的函数。如果提供，将直接使用该容器
+  - `className?: string` - 容器类名，仅在创建新容器时使用
+  - `onRef?: (ref: any, destroy: () => void) => void` - ref 创建后的回调函数，接收 ref 对象和销毁函数
+  - `onAppendContainer?: (container: HTMLElement) => void | boolean` - 容器追加到 DOM 前的回调函数，返回 `true` 可阻止自动追加到 `document.body`
+  - `onRemoveContainer?: (container: HTMLElement) => void | boolean` - 容器从 DOM 移除前的回调函数，返回 `true` 可阻止自动移除
+  - `onDestroyComponent?: (container: HTMLElement) => void | boolean` - 组件销毁前的回调函数，返回 `true` 可阻止自动调用 `ReactDOM.unmountComponentAtNode`
+  - `destroyDelay?: number` - 销毁延迟时间（毫秒），默认为 `50`。用于延迟执行销毁操作，避免动画未完成
 
 **返回值：**
 
-- `Promise<[React.RefObject<T>, () => void]>` - 返回一个元组，包含组件的 ref 对象和销毁函数
+- `Promise<[ref: R, destroy: () => void]>` - 返回一个 Promise，resolve 后得到一个元组：
+  - `ref: R` - 组件的 ref 对象，包含组件暴露的所有方法和属性
+  - `destroy: () => void` - 销毁函数，调用后会卸载组件并移除容器（如果容器是自动创建的）
+
+### ModalRef
+
+`ModalRef` 是模态框控制对象的类型定义，包含以下属性和方法：
+
+```typescript
+type ModalRef<
+  P extends ModalType = 'modal',
+  T extends Record<string, any> = Record<string, any>,
+  U = any,
+  C extends Record<string, any> = {}
+> = {
+  /** 只读属性：模态框是否可见 */
+  readonly visible: boolean;
+  /** 只读属性：当前模态框数据 */
+  readonly data: Partial<Omit<T, 'onCancel'|'onOK'>> & { [key: string]: any };
+  /** 只读属性：用于传递给 Modal/Drawer 组件的 props */
+  readonly props: ModalPropsTypeMap[P];
+  /** 只读属性：当前配置选项 */
+  readonly options: ModalRefOption<P, T, U, C>;
+  /** 只读属性：当前模态框选项 */
+  readonly modalOptions: ModalModalOptions;
+  /** 只读属性：当前模态框的 Promise */
+  readonly modalPromise: null | Promise<any> | PromiseLike<any>;
+
+  /** 打开模态框并返回 Promise */
+  modal(newData: T, options?: ModalModalOptions): Promise<U>;
+
+  /** 结束模态框并返回结果 */
+  endModal: (result?: U, onDone?: () => void) => Promise<void>;
+  
+  /** 取消模态框 */
+  cancelModal: (ex?: any, onDone?: () => void) => Promise<void>;
+
+  [key: string]: any;
+} & {
+  [key in keyof C]: C[key];
+}
+```
+
+**属性说明：**
+
+- `visible: boolean` - 只读属性，表示模态框当前是否可见
+- `data: T` - 只读属性，当前模态框的数据对象
+- `props: ModalPropsTypeMap[P]` - 只读属性，根据模态框类型返回相应的 props：
+  - 对于 `'modal'` 类型：`{ visible: boolean, onCancel: () => void }`
+  - 对于 `'drawer'` 类型：`{ open?: boolean, onClose?: () => void }`
+  - 对于 `'popover'` 类型：`{ visible: boolean, onClose: () => void }`
+- `options: ModalRefOption<P, T, U, C>` - 只读属性，当前配置选项
+- `modalOptions: ModalModalOptions` - 只读属性，当前模态框选项
+- `modalPromise: Promise<U> | null` - 只读属性，当前模态框的 Promise，如果模态框未打开则为 `null`
+
+**方法说明：**
+
+- `modal(newData: T, options?: ModalModalOptions): Promise<U>` - 打开模态框的方法
+  - `newData: T` - 要传递给模态框的新数据，会与 `defaultData` 合并
+  - `options?: ModalModalOptions` - 模态框选项，包含以下属性：
+    - `modalDataEvent?: boolean` - 是否启用数据事件（`onOK`、`onCancel`）
+    - `afterModal?: (newData: any, options?: ModalModalOptions) => void` - 模态框打开后的钩子
+    - `beforeCloseModal?: (next: (ok: any) => void, action: ModalAction) => void | Promise<void>` - 关闭前的钩子
+    - `beforeEndModal?: (value?: any) => Promise<any>` - 结束前的钩子，可以修改返回值
+    - `beforeCancelModal?: (reason?: any) => Promise<any>` - 取消前的钩子，可以修改取消原因
+    - `afterCloseModal?: (newData: any, action: ModalAction, modal: ModalRef<any, any, any>) => void | Promise<void>` - 关闭后的钩子
+    - `forceVisible?: boolean` - 强制显示，即使已有模态框打开
+    - `alwaysResolve?: boolean` - 是否总是 resolve Promise
+  - 返回 `Promise<U>`，resolve 时返回结果，reject 时表示取消
+- `endModal(result?: U, onDone?: () => void): Promise<void>` - 结束模态框
+  - `result?: U` - 要返回的结果值
+  - `onDone?: () => void` - 完成后的回调函数
+- `cancelModal(ex?: any, onDone?: () => void): Promise<void>` - 取消模态框
+  - `ex?: any` - 取消原因，默认为 `'cancel'`
+  - `onDone?: () => void` - 完成后的回调函数
+
+### getUrlListener
+
+获取 URL 监听器实例，用于监听浏览器 URL 变化。
+
+```typescript
+function getUrlListener(): UrlListener
+
+interface UrlListener {
+  addListener: (
+    listener: (url: string) => void,
+    options?: { once?: boolean }
+  ) => () => void;
+}
+```
+
+**返回值：**
+
+- `UrlListener` - URL 监听器对象，包含以下方法：
+  - `addListener(listener: (url: string) => void, options?: { once?: boolean }): () => void` - 添加 URL 变化监听器
+    - `listener: (url: string) => void` - 监听器函数，当 URL 变化时调用，参数为新 URL
+    - `options?: { once?: boolean }` - 选项对象，`once` 为 `true` 时监听器只执行一次
+    - 返回一个取消监听的函数
+
+**使用示例：**
+
+```typescript
+import { getUrlListener } from 'use-modal-ref';
+
+const urlListener = getUrlListener();
+
+// 添加监听器
+const removeListener = urlListener.addListener((url) => {
+  console.log('URL changed to:', url);
+}, { once: true });
+
+// 移除监听器
+removeListener();
+```
 
 ## 📘 TypeScript 支持
 

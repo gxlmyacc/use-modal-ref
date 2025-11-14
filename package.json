@@ -1,6 +1,6 @@
 {
   "name": "use-modal-ref",
-  "version": "0.1.5",
+  "version": "0.1.6-alpha.1",
   "description": "react hooks for modal usage",
   "keywords": [
     "react",
@@ -66,6 +66,7 @@
     "@babel/preset-typescript": "^7.12.7",
     "@typescript-eslint/eslint-plugin": "^4.9.1",
     "@typescript-eslint/parser": "^4.9.1",
+    "@types/node": "^20.0.0",
     "@types/react": "^16",
     "@types/react-dom": "^16",
     "babel-eslint": "^10.0.2",
@@ -89,7 +90,7 @@
     "progress-bar-webpack-plugin": "^1.12.1",
     "react": "^16",
     "react-dom": "^16",
-    "typescript": "^4.1.2",
+    "typescript": "^5.9.3",
     "uglifyjs-webpack-plugin": "^2.1.3",
     "webpack": "^4.35.3",
     "webpack-bundle-analyzer": "^3.4.1",

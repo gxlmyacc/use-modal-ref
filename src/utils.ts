@@ -19,11 +19,11 @@ function copyOwnProperties<
  T extends Record<string, any>,
  S extends Record<string, any>
 >(target: T|null, source: S|null, options?: { overwrite?: boolean }): T & S {
-  const { overwrite = false  } = options || {};
+  const { overwrite = false } = options || {};
   if (!target || !source) {
     return target as any;
   }
-  Object.getOwnPropertyNames(source).forEach(key => {
+  Object.getOwnPropertyNames(source).forEach((key) => {
     if (hasOwnProp(target, key)) {
       if (!overwrite) {
         return;
@@ -34,8 +34,36 @@ function copyOwnProperties<
   return target as any;
 }
 
+
+function throttle<T extends(...args: any[]) => any>(
+  fn: T,
+  delayTime = 500,
+  trail = false): (...args: Parameters<T>) => void {
+  let canRun = true;
+  let fnArgs: Parameters<T> = [] as any;
+  return function (this: any, ...args: Parameters<T>) {
+    fnArgs = args;
+    if (!canRun) {
+      return;
+    }
+    canRun = false;
+    setTimeout(() => {
+      canRun = true;
+      if (trail) {
+        fn.apply(this, fnArgs);
+      }
+    }, delayTime);
+
+    if (!trail) {
+      fn.apply(this, fnArgs);
+    }
+  };
+}
+
+
 export {
   isFunction,
   copyOwnProperty,
-  copyOwnProperties
+  copyOwnProperties,
+  throttle,
 };
