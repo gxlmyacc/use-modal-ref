@@ -176,7 +176,7 @@ function useCommonRef<
           promise: null,
         }));
 
-  const { useImperativeHandle: _useImperativeHandle } = options;
+  const { useImperativeHandle: _useImperativeHandle = true } = options;
 
   const [$refs] = useState({ } as { props: typeof props, defaultData: typeof defaultData });
   $refs.props = props;
