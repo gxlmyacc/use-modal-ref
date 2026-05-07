@@ -572,7 +572,7 @@ function useModalRef<T = any, U = any, C extends Record<string, any> = {}>(
     );
   }
   ```
-  
+
   - `beforeModal?: (newData: Partial<T>, pause: (result: any, isError?: boolean) => void, options: Record<string, any>) => void | Partial<T> | Promise<void | Partial<T>>` - 模态框打开前的钩子函数，可以修改数据或暂停打开流程
   - `afterModal?: (newData: T, options?: ModalModalOptions) => void` - 模态框打开后的钩子函数
   - `init?: (newData: T, options: Record<string, any>) => void | Promise<void>` - 初始化钩子函数，在模态框打开后执行

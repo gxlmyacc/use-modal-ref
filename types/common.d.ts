@@ -2,6 +2,7 @@ import React from 'react';
 type EndModalMethod = (result?: any, onDone?: () => void) => Promise<void>;
 type CancelModalMethod = (ex?: any, onDone?: () => void) => Promise<void>;
 export type ModalRefOption<P extends ModalType, T extends Record<string, any>, U, C extends Record<string, any> = {}> = {
+    useImperativeHandle?: boolean;
     alwaysResolve?: boolean;
     custom?: C;
     beforeModal?: (newData: Partial<T>, pause: (result: any, isError?: boolean) => void, options: Record<string, any>) => void | Partial<T> | Promise<void | Partial<T>>;
@@ -54,7 +55,7 @@ export type ModalRef<P extends ModalType = 'modal', T extends Record<string, any
     readonly options: ModalRefOption<P, T, U, C>;
     readonly modalOptions: ModalModalOptions;
     readonly modalPromise: null | Promise<any> | PromiseLike<any>;
-    modal(newData: T, options?: ModalModalOptions): Promise<U>;
+    modal(newData?: T, options?: ModalModalOptions): Promise<U>;
     endModal: EndModalMethod;
     cancelModal: CancelModalMethod;
     [key: string]: any;

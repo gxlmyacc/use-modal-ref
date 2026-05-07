@@ -4,7 +4,7 @@ function useDrawerRef<T extends Record<string, any>, U = any, C extends Record<s
   ref: React.Ref<any>,
   defaultData: Partial<T>|(() => Partial<T>) = {},
   options: ModalRefOption<'drawer', T, U, C> = {},
-  deps: React.DependencyList = []
+  deps: React.DependencyList = [],
 ) {
   return useCommonRef('drawer', ref, defaultData, options, deps);
 }

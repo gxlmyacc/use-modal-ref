@@ -24,6 +24,7 @@ export type ModalRefOption<
   U,
   C extends Record<string, any> = {}
 > = {
+  useImperativeHandle?: boolean,
   alwaysResolve?: boolean,
   custom?: C,
   beforeModal?: (
@@ -121,7 +122,7 @@ export type ModalRef<
   readonly modalOptions: ModalModalOptions,
   readonly modalPromise: null|Promise<any>|PromiseLike<any>,
 
-  modal(newData: T, options?: ModalModalOptions): Promise<U>;
+  modal(newData?: T, options?: ModalModalOptions): Promise<U>;
 
   endModal: EndModalMethod;
   cancelModal: CancelModalMethod;
@@ -175,10 +176,11 @@ function useCommonRef<
           promise: null,
         }));
 
+  const { useImperativeHandle: _useImperativeHandle } = options;
+
   const [$refs] = useState({ } as { props: typeof props, defaultData: typeof defaultData });
   $refs.props = props;
   $refs.defaultData = defaultData;
-
   const modal = useMemo<ModalRef<P, T, U, C>>(
     () => {
       const ret: ModalRef<P, T, U, C> = {
@@ -397,7 +399,10 @@ function useCommonRef<
     }, [$refs],
   );
 
-  useImperativeHandle(ref, () => modal, [modal]);
+  if (_useImperativeHandle) {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    useImperativeHandle(ref, () => modal, [modal]);
+  }
 
   useMemo(() => {
     MODAL_EVENTS.forEach((eventName) => {

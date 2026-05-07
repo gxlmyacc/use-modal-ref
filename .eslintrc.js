@@ -54,5 +54,13 @@ module.exports = {
     '__ENV__': true,
     '__VERSION__': true,
     '__WATCH__': true,
-  }
+  },
+  overrides: [
+    {
+      files: ['babel.config.js', '.eslintrc.js'],
+      parserOptions: {
+        project: null,
+      },
+    },
+  ],
 };
